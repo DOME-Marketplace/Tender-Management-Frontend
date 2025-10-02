@@ -1,0 +1,8 @@
+{
+  "/tmf-api/*": {
+    "target": "https://an-dhub-sbx.dome-project.eu",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
