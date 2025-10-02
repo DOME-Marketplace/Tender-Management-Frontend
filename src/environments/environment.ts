@@ -2,6 +2,7 @@ export const environment = {
   production: false,
   apiUrl: 'http://localhost:8080/quoteManagement',
   productApiUrl: 'https://an-dhub-sbx.dome-project.eu/tmf-api/productCatalogManagement/v4/productOffering',
+  providerApiUrl: 'https://an-dhub-sbx.dome-project.eu/tmf-api/party/v4/organization',
 
   endpoints: {
     createQuote: '/createQuote',
