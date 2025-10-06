@@ -1,12 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ProviderService, Provider } from '../../../../core/services/provider.service';
 import { NotificationComponent } from '../../../../shared/components/notification/notification.component';
 
 @Component({
   selector: 'app-provider-list',
   standalone: true,
-  imports: [CommonModule, NotificationComponent],
+  imports: [CommonModule, FormsModule, NotificationComponent],
   template: `
     <app-notification></app-notification>
     
@@ -139,13 +140,86 @@ import { NotificationComponent } from '../../../../shared/components/notificatio
     <div *ngIf="showTenderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
       <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white" (click)="$event.stopPropagation()">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-bold text-gray-900">Select Providers for Tender</h3>
+          <h3 class="text-lg font-bold text-gray-900">Create New Tender</h3>
           <button (click)="closeTenderModal()" class="text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
+        
+        <!-- Tender Form Fields -->
+        <div class="mb-6 space-y-4">
+          <!-- Response Deadline -->
+          <div>
+            <label for="responseDeadline" class="block text-sm font-medium text-gray-700 mb-2">
+              Response Deadline
+            </label>
+            <input 
+              type="datetime-local" 
+              id="responseDeadline"
+              [(ngModel)]="responseDeadline"
+              [min]="getMinDateTime()"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Select deadline date and time"
+            />
+          </div>
+          
+          <!-- Upload Attachment -->
+          <div>
+            <label for="attachment" class="block text-sm font-medium text-gray-700 mb-2">
+              Upload Attachment (PDF only)
+            </label>
+            <div class="flex items-center space-x-4">
+              <input 
+                type="file" 
+                id="attachment"
+                accept=".pdf,application/pdf"
+                (change)="onAttachmentSelected($event)"
+                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <div *ngIf="attachmentFile" class="flex items-center space-x-2">
+                <div class="text-sm text-green-600 flex items-center">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  {{ attachmentFile.name }}
+                </div>
+                <button 
+                  (click)="removeAttachment()"
+                  type="button"
+                  class="text-red-600 hover:text-red-800 text-sm flex items-center"
+                  title="Remove attachment"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  <span class="ml-1">Remove</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Note -->
+          <div>
+            <label for="tenderNote" class="block text-sm font-medium text-gray-700 mb-2">
+              Note
+            </label>
+            <textarea 
+              id="tenderNote"
+              [(ngModel)]="tenderNote"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter any additional notes for this tender..."
+            ></textarea>
+          </div>
+        </div>
+        
+        <!-- Divider -->
+        <div class="border-t border-gray-200 mb-6"></div>
+        
+        <!-- Section Title -->
+        <h4 class="text-md font-semibold text-gray-900 mb-4">Select Providers to Invite</h4>
         
         <!-- Loading State -->
         <div *ngIf="tenderLoading" class="flex justify-center py-8">
@@ -222,7 +296,7 @@ import { NotificationComponent } from '../../../../shared/components/notificatio
           </button>
           <button 
             (click)="createTenderWithSelectedProviders()" 
-            [disabled]="selectedProviders.size === 0"
+            [disabled]="selectedProviders.size === 0 || !responseDeadline"
             class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Create Tender ({{ selectedProviders.size }} selected)
@@ -256,6 +330,11 @@ export class ProviderListComponent implements OnInit {
   selectedProviders: Set<string> = new Set();
   tenderLoading = false;
   tenderError: string | null = null;
+
+  // Tender form fields
+  responseDeadline: string = '';
+  attachmentFile: File | null = null;
+  tenderNote: string = '';
 
   ngOnInit() {
     this.loadProviders();
@@ -342,11 +421,53 @@ export class ProviderListComponent implements OnInit {
     this.selectedProviders.clear();
     this.tenderProviders = [];
     this.tenderError = null;
+    this.resetTenderForm();
+  }
+
+  resetTenderForm() {
+    this.responseDeadline = '';
+    this.attachmentFile = null;
+    this.tenderNote = '';
+  }
+
+  onAttachmentSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      if (file.type === 'application/pdf') {
+        this.attachmentFile = file;
+      } else {
+        alert('Please select a PDF file only.');
+        input.value = '';
+      }
+    }
+  }
+
+  removeAttachment() {
+    this.attachmentFile = null;
+    // Clear the file input
+    const fileInput = document.getElementById('attachment') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }
+
+  getMinDateTime(): string {
+    const now = new Date();
+    // Add 1 minute to current time to ensure it's in the future
+    now.setMinutes(now.getMinutes() + 1);
+    return now.toISOString().slice(0, 16);
   }
 
   createTenderWithSelectedProviders() {
     const selectedProviderIds = Array.from(this.selectedProviders);
-    console.log('Creating tender with providers:', selectedProviderIds);
+    const tenderData = {
+      responseDeadline: this.responseDeadline,
+      attachmentFile: this.attachmentFile,
+      tenderNote: this.tenderNote,
+      selectedProviders: selectedProviderIds
+    };
+    console.log('Creating tender with data:', tenderData);
     // TODO: Implement actual tender creation logic
     this.closeTenderModal();
   }
