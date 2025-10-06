@@ -14,13 +14,21 @@ import { NotificationComponent } from '../../../../shared/components/notificatio
       <div class="px-4 py-5 sm:p-6">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg leading-6 font-medium text-gray-900">Provider List</h3>
-          <button 
-            (click)="loadProviders()" 
-            [disabled]="loading"
-            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {{ loading ? 'Loading...' : 'Refresh' }}
-          </button>
+          <div class="flex space-x-2">
+            <button 
+              (click)="createTender()" 
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Create a Tender
+            </button>
+            <button 
+              (click)="loadProviders()" 
+              [disabled]="loading"
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              {{ loading ? 'Loading...' : 'Refresh' }}
+            </button>
+          </div>
         </div>
         
         <div *ngIf="loading" class="flex justify-center py-8">
@@ -193,5 +201,10 @@ export class ProviderListComponent implements OnInit {
 
   closeDetails() {
     this.selectedProvider = null;
+  }
+
+  createTender() {
+    // TODO: Implement create tender functionality
+    console.log('Create tender clicked');
   }
 }
