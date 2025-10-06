@@ -71,4 +71,25 @@ export class ProviderService {
       })
     );
   }
+
+  getProvidersForTender(): Observable<Provider[]> {
+    const targetUrl = this.endpoint;
+    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
+    
+    return this.http.get<any>(proxyUrl).pipe(
+      map(response => {
+        try {
+          const data = JSON.parse(response.contents);
+          return Array.isArray(data) ? data : [];
+        } catch (error) {
+          console.error('Error parsing providers for tender:', error);
+          return [];
+        }
+      }),
+      catchError((error) => {
+        console.warn('Providers for tender API failed:', error);
+        return of([]);
+      })
+    );
+  }
 }

@@ -134,6 +134,102 @@ import { NotificationComponent } from '../../../../shared/components/notificatio
         </div>
       </div>
     </div>
+
+    <!-- Tender Creation Modal -->
+    <div *ngIf="showTenderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
+      <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white" (click)="$event.stopPropagation()">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold text-gray-900">Select Providers for Tender</h3>
+          <button (click)="closeTenderModal()" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Loading State -->
+        <div *ngIf="tenderLoading" class="flex justify-center py-8">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+        
+        <!-- Error State -->
+        <div *ngIf="tenderError" class="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-red-800">Error loading providers</h3>
+              <p class="mt-1 text-sm text-red-700">{{ tenderError }}</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Providers Table -->
+        <div *ngIf="!tenderLoading && !tenderError" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Company
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Invite
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr *ngFor="let provider of tenderProviders" class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ provider.tradingName || 'Unnamed Provider' }}
+                  </div>
+                  <div *ngIf="provider.id" class="text-sm text-gray-500">
+                    ID: {{ provider.id }}
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <input 
+                    type="checkbox" 
+                    [checked]="selectedProviders.has(provider.id || '')"
+                    (change)="toggleProviderSelection(provider.id || '')"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- No providers message -->
+          <div *ngIf="tenderProviders.length === 0" class="text-center py-8">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No providers available</h3>
+            <p class="mt-1 text-sm text-gray-500">No providers were found for tender creation.</p>
+          </div>
+        </div>
+        
+        <!-- Modal Actions -->
+        <div *ngIf="!tenderLoading" class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+          <button 
+            (click)="closeTenderModal()" 
+            class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+          >
+            Cancel
+          </button>
+          <button 
+            (click)="createTenderWithSelectedProviders()" 
+            [disabled]="selectedProviders.size === 0"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Create Tender ({{ selectedProviders.size }} selected)
+          </button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .line-clamp-3 {
@@ -153,6 +249,13 @@ export class ProviderListComponent implements OnInit {
   error: string | null = null;
   currentOffset = 0;
   pageSize = 10;
+
+  // Properties for tender creation modal
+  showTenderModal = false;
+  tenderProviders: Provider[] = [];
+  selectedProviders: Set<string> = new Set();
+  tenderLoading = false;
+  tenderError: string | null = null;
 
   ngOnInit() {
     this.loadProviders();
@@ -204,7 +307,47 @@ export class ProviderListComponent implements OnInit {
   }
 
   createTender() {
-    // TODO: Implement create tender functionality
-    console.log('Create tender clicked');
+    this.showTenderModal = true;
+    this.selectedProviders.clear();
+    this.loadTenderProviders();
+  }
+
+  loadTenderProviders() {
+    this.tenderLoading = true;
+    this.tenderError = null;
+    
+    this.providerService.getProvidersForTender().subscribe({
+      next: (providers) => {
+        this.tenderProviders = providers;
+        this.tenderLoading = false;
+      },
+      error: (err) => {
+        this.tenderError = 'Failed to load providers: ' + (err.message || 'Unknown error');
+        this.tenderLoading = false;
+        console.error('Error loading tender providers:', err);
+      }
+    });
+  }
+
+  toggleProviderSelection(providerId: string) {
+    if (this.selectedProviders.has(providerId)) {
+      this.selectedProviders.delete(providerId);
+    } else {
+      this.selectedProviders.add(providerId);
+    }
+  }
+
+  closeTenderModal() {
+    this.showTenderModal = false;
+    this.selectedProviders.clear();
+    this.tenderProviders = [];
+    this.tenderError = null;
+  }
+
+  createTenderWithSelectedProviders() {
+    const selectedProviderIds = Array.from(this.selectedProviders);
+    console.log('Creating tender with providers:', selectedProviderIds);
+    // TODO: Implement actual tender creation logic
+    this.closeTenderModal();
   }
 }
