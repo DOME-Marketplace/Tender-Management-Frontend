@@ -99,15 +99,9 @@ export class ProviderService {
     attachmentFile: File | null;
     tenderNote: string;
     selectedProviders: string[];
-  }): Observable<any> {
-    console.warn('[TODO] saveTenderDraft chiamato. Sostituire con chiamata HTTP reale.', draft);
-    // Esempio futuro:
-    // const formData = new FormData();
-    // formData.append('responseDeadline', draft.responseDeadline);
-    // if (draft.attachmentFile) formData.append('attachment', draft.attachmentFile);
-    // formData.append('tenderNote', draft.tenderNote);
-    // formData.append('selectedProviders', JSON.stringify(draft.selectedProviders));
-    // return this.http.post(`${environment.apiBaseUrl}/tenders/drafts`, formData);
-    return of({ ok: true, todo: true });
+  }): Observable<void> {
+    console.warn('[TODO] saveTenderDraft non ancora implementato.', draft);
+    return of();
   }
+  
 }

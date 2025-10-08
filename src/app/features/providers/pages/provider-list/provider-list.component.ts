@@ -473,15 +473,6 @@ export class ProviderListComponent implements OnInit {
       selectedProviders: Array.from(this.selectedProviders)
     };
     console.log('Saving tender draft:', draftData);
-    // TODO: Sostituire con gestione reale di caricamento/stato di esito
-    this.providerService.saveTenderDraft(draftData).subscribe({
-      next: (res) => {
-        console.log('Draft saved (placeholder response):', res);
-      },
-      error: (err) => {
-        console.error('Error saving draft (placeholder):', err);
-      }
-    });
   }
 
   createTenderWithSelectedProviders() {
