@@ -295,6 +295,12 @@ import { NotificationComponent } from '../../../../shared/components/notificatio
             Cancel
           </button>
           <button 
+            (click)="saveTenderForm()" 
+            class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            Save
+          </button>
+          <button 
             (click)="createTenderWithSelectedProviders()" 
             [disabled]="selectedProviders.size === 0 || !responseDeadline"
             class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -457,6 +463,25 @@ export class ProviderListComponent implements OnInit {
     // Add 1 minute to current time to ensure it's in the future
     now.setMinutes(now.getMinutes() + 1);
     return now.toISOString().slice(0, 16);
+  }
+
+  saveTenderForm() {
+    const draftData = {
+      responseDeadline: this.responseDeadline,
+      attachmentFile: this.attachmentFile,
+      tenderNote: this.tenderNote,
+      selectedProviders: Array.from(this.selectedProviders)
+    };
+    console.log('Saving tender draft:', draftData);
+    // TODO: Sostituire con gestione reale di caricamento/stato di esito
+    this.providerService.saveTenderDraft(draftData).subscribe({
+      next: (res) => {
+        console.log('Draft saved (placeholder response):', res);
+      },
+      error: (err) => {
+        console.error('Error saving draft (placeholder):', err);
+      }
+    });
   }
 
   createTenderWithSelectedProviders() {
