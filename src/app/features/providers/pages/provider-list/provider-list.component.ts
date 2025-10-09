@@ -1,8 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ProviderService, Provider } from '../../../../core/services/provider.service';
 import { NotificationComponent } from '../../../../shared/components/notification/notification.component';
+import { TenderService } from '../../../../core/services/tender.service';
+import { NotificationService } from '../../../../shared/services/notification.service';
+import { Tender_Create, TenderAttachment, Tender } from '../../../../shared/models/tender.model';
 
 @Component({
   selector: 'app-provider-list',
@@ -140,7 +144,7 @@ import { NotificationComponent } from '../../../../shared/components/notificatio
     <div *ngIf="showTenderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
       <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white" (click)="$event.stopPropagation()">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-bold text-gray-900">Create New Tender</h3>
+          <h3 class="text-lg font-bold text-gray-900">{{ editingTenderId ? 'Edit Tender' : 'Create New Tender' }}</h3>
           <button (click)="closeTenderModal()" class="text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -170,6 +174,20 @@ import { NotificationComponent } from '../../../../shared/components/notificatio
             <label for="attachment" class="block text-sm font-medium text-gray-700 mb-2">
               Upload Attachment (PDF only)
             </label>
+            
+            <!-- Existing attachment info -->
+            <div *ngIf="existingAttachment && !attachmentFile" class="mb-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center text-sm text-blue-700">
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  <span class="font-medium">Current: {{ existingAttachment.name }}</span>
+                </div>
+                <span class="text-xs text-blue-600">Upload new file to replace</span>
+              </div>
+            </div>
+            
             <div class="flex items-center space-x-4">
               <input 
                 type="file" 
@@ -322,6 +340,9 @@ import { NotificationComponent } from '../../../../shared/components/notificatio
 })
 export class ProviderListComponent implements OnInit {
   private providerService = inject(ProviderService);
+  private tenderService = inject(TenderService);
+  private notificationService = inject(NotificationService);
+  private router = inject(Router);
   
   providers: Provider[] = [];
   selectedProvider: Provider | null = null;
@@ -341,9 +362,45 @@ export class ProviderListComponent implements OnInit {
   responseDeadline: string = '';
   attachmentFile: File | null = null;
   tenderNote: string = '';
+  
+  // Edit mode
+  editingTenderId: string | null = null;
+  existingAttachment: TenderAttachment | null = null;
 
   ngOnInit() {
     this.loadProviders();
+    
+    // Check if there's a tender to edit from navigation state
+    const navigation = this.router.getCurrentNavigation();
+    if (navigation?.extras?.state?.['tender']) {
+      const tender = navigation.extras.state['tender'] as Tender;
+      this.loadTenderForEdit(tender);
+    } else {
+      // Check history state (for page refresh)
+      const state = window.history.state;
+      if (state?.tender) {
+        const tender = state.tender as Tender;
+        this.loadTenderForEdit(tender);
+      }
+    }
+  }
+
+  loadTenderForEdit(tender: Tender) {
+    this.editingTenderId = tender.id || null;
+    this.responseDeadline = tender.responseDeadline;
+    this.tenderNote = tender.tenderNote || '';
+    
+    // Store existing attachment
+    if (tender.attachment) {
+      this.existingAttachment = tender.attachment;
+      console.log('Tender has existing attachment:', tender.attachment.name);
+    } else {
+      this.existingAttachment = null;
+    }
+    
+    this.selectedProviders = new Set(tender.selectedProviders);
+    this.showTenderModal = true;
+    this.loadTenderProviders();
   }
 
   loadProviders() {
@@ -427,6 +484,7 @@ export class ProviderListComponent implements OnInit {
     this.selectedProviders.clear();
     this.tenderProviders = [];
     this.tenderError = null;
+    this.editingTenderId = null;
     this.resetTenderForm();
   }
 
@@ -434,6 +492,7 @@ export class ProviderListComponent implements OnInit {
     this.responseDeadline = '';
     this.attachmentFile = null;
     this.tenderNote = '';
+    this.existingAttachment = null;
   }
 
   onAttachmentSelected(event: Event) {
@@ -465,14 +524,69 @@ export class ProviderListComponent implements OnInit {
     return now.toISOString().slice(0, 16);
   }
 
-  saveTenderForm() {
-    const draftData = {
-      responseDeadline: this.responseDeadline,
-      attachmentFile: this.attachmentFile,
-      tenderNote: this.tenderNote,
-      selectedProviders: Array.from(this.selectedProviders)
-    };
-    console.log('Saving tender draft:', draftData);
+  async saveTenderForm() {
+    if (!this.responseDeadline) {
+      this.notificationService.showError('Response deadline is required');
+      return;
+    }
+
+    try {
+      let attachment: TenderAttachment | undefined;
+      
+      if (this.attachmentFile) {
+        // New file uploaded
+        const base64Content = await this.tenderService.fileToBase64(this.attachmentFile);
+        attachment = {
+          name: this.attachmentFile.name,
+          mimeType: this.attachmentFile.type,
+          content: base64Content,
+          size: this.attachmentFile.size
+        };
+      } else if (this.existingAttachment) {
+        // Keep existing attachment when editing
+        attachment = this.existingAttachment;
+      }
+
+      const tenderData: Tender_Create = {
+        category: 'coordinator',
+        state: 'draft',
+        responseDeadline: this.responseDeadline,
+        tenderNote: this.tenderNote,
+        attachment: attachment,
+        selectedProviders: Array.from(this.selectedProviders)
+      };
+
+      if (this.editingTenderId) {
+        // Update existing tender
+        this.tenderService.updateTender(this.editingTenderId, tenderData).subscribe({
+          next: (updatedTender) => {
+            console.log('Tender updated successfully:', updatedTender);
+            this.notificationService.showSuccess('Tender draft updated successfully');
+            this.closeTenderModal();
+          },
+          error: (error) => {
+            console.error('Error updating tender:', error);
+            this.notificationService.showError('Failed to update tender draft');
+          }
+        });
+      } else {
+        // Create new tender
+        this.tenderService.createTender(tenderData).subscribe({
+          next: (newTender) => {
+            console.log('Tender created successfully:', newTender);
+            this.notificationService.showSuccess('Tender draft saved successfully');
+            this.closeTenderModal();
+          },
+          error: (error) => {
+            console.error('Error creating tender:', error);
+            this.notificationService.showError('Failed to save tender draft');
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error processing attachment:', error);
+      this.notificationService.showError('Failed to process attachment');
+    }
   }
 
   createTenderWithSelectedProviders() {

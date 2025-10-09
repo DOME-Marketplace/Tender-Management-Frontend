@@ -11,6 +11,8 @@ import { ConfirmDialogComponent } from '../../../../shared/components/confirm-di
 import { QuoteDetailsModalComponent } from '../../../../shared/components/quote-details-modal/quote-details-modal.component';
 import { ChatModalComponent } from '../../../../shared/components/chat-modal/chat-modal.component';
 import { AttachmentModalComponent } from '../../../../shared/components/attachment-modal/attachment-modal.component';
+import { TenderService } from '../../../../core/services/tender.service';
+import { Tender } from '../../../../shared/models/tender.model';
 
 @Component({
   selector: 'app-quote-list',
@@ -85,6 +87,87 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
             <option value="cancelled">Cancelled</option>
             <option value="accepted">Accepted</option>
           </select>
+        </div>
+      </div>
+
+      <!-- Tenders Section -->
+      <div *ngIf="tenders.length > 0" class="mb-8 bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="bg-indigo-50 px-6 py-3 border-b border-indigo-100">
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-indigo-900">My Tenders</h2>
+            <button
+              (click)="refreshTenders()"
+              class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+        
+        <!-- Tenders Header -->
+        <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+          <div class="grid grid-cols-12 gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <div class="col-span-2">TENDER ID</div>
+            <div class="col-span-2">STATE</div>
+            <div class="col-span-3">RESPONSE DEADLINE</div>
+            <div class="col-span-2">ATTACHMENT</div>
+            <div class="col-span-3">ACTIONS</div>
+          </div>
+        </div>
+        
+        <!-- Tender Rows -->
+        <div *ngFor="let tender of tenders" class="tender-row">
+          <div 
+            class="grid grid-cols-12 gap-4 items-center px-6 py-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+            (click)="openTenderForEdit(tender)"
+            [attr.data-tender-id]="tender.id">
+            
+            <!-- Tender ID -->
+            <div class="col-span-2 text-sm font-medium text-gray-900">
+              Tender {{ extractTenderShortId(tender.id) }}
+            </div>
+            
+            <!-- State -->
+            <div class="col-span-2">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                    [ngClass]="getTenderStateClass(tender.state)">
+                {{ tender.state }}
+              </span>
+            </div>
+            
+            <!-- Response Deadline -->
+            <div class="col-span-3 text-sm text-gray-600">
+              {{ formatTenderDeadline(tender.responseDeadline) }}
+            </div>
+            
+            <!-- Attachment -->
+            <div class="col-span-2">
+              <button
+                *ngIf="tender.attachment"
+                (click)="downloadTenderAttachment(tender); $event.stopPropagation()"
+                class="p-1.5 text-purple-500 hover:text-purple-700 rounded hover:bg-gray-100 transition-colors"
+                title="Download attachment"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </button>
+              <span *ngIf="!tender.attachment" class="text-xs text-gray-400">No attachment</span>
+            </div>
+            
+            <!-- Actions -->
+            <div class="col-span-3 flex gap-2" (click)="$event.stopPropagation()">
+              <button
+                (click)="confirmDeleteTender(tender)"
+                class="p-1.5 text-red-500 hover:text-red-700 rounded hover:bg-gray-100 transition-colors"
+                title="Delete tender"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -451,9 +534,11 @@ export class QuoteListComponent implements OnInit {
   private quoteService = inject(QuoteService);
   private loginService = inject(LoginService);
   private notificationService = inject(NotificationService);
+  private tenderService = inject(TenderService);
 
   quotes: Quote[] = [];
   filteredQuotes: Quote[] = [];
+  tenders: Tender[] = [];
   loading = false;
   error: string | null = null;
   showDeleteConfirm = false;
@@ -495,9 +580,23 @@ export class QuoteListComponent implements OnInit {
     this.currentUserId = this.loginService.getUserId();
     if (this.currentUserId) {
       this.loadQuotes();
+      this.loadTenders();
     } else {
       this.error = 'User not authenticated';
     }
+  }
+
+  loadTenders() {
+    this.tenderService.getTenders().subscribe({
+      next: (tenders) => {
+        this.tenders = tenders;
+        console.log('Loaded tenders:', tenders);
+      },
+      error: (error) => {
+        console.error('Failed to load tenders:', error);
+        // Don't show error for tenders, just log it
+      }
+    });
   }
 
   loadQuotes() {
@@ -996,5 +1095,88 @@ export class QuoteListComponent implements OnInit {
 
   canUpdateState(state: QuoteStateType | undefined): boolean {
     return state !== 'cancelled' && state !== 'accepted';
+  }
+
+  // Tender methods
+  extractTenderShortId(id: string | undefined): string {
+    if (!id) return 'N/A';
+    return id.length > 8 ? id.slice(-8) : id;
+  }
+
+  formatTenderDeadline(deadline: string): string {
+    if (!deadline) return 'N/A';
+    try {
+      const date = new Date(deadline);
+      return date.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return deadline;
+    }
+  }
+
+  getTenderStateClass(state: string): string {
+    switch (state) {
+      case 'draft':
+        return 'bg-gray-100 text-gray-800';
+      case 'sent':
+        return 'bg-blue-100 text-blue-800';
+      case 'closed':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  }
+
+  openTenderForEdit(tender: Tender) {
+    // Navigate to provider list with tender data
+    this.router.navigate(['/providers'], {
+      state: { tender: tender }
+    });
+  }
+
+  downloadTenderAttachment(tender: Tender) {
+    try {
+      this.tenderService.downloadAttachment(tender);
+      this.notificationService.showSuccess('Download started');
+    } catch (error: any) {
+      console.error('Error downloading tender attachment:', error);
+      this.notificationService.showError(error.message || 'Error downloading attachment');
+    }
+  }
+
+  confirmDeleteTender(tender: Tender) {
+    const shortId = this.extractTenderShortId(tender.id);
+    const confirmDelete = confirm(`Are you sure you want to delete Tender ${shortId}?\n\nThis action cannot be undone.`);
+    
+    if (!confirmDelete) {
+      return;
+    }
+
+    this.deleteTender(tender);
+  }
+
+  deleteTender(tender: Tender) {
+    if (!tender.id) return;
+
+    this.tenderService.deleteTender(tender.id).subscribe({
+      next: () => {
+        this.tenders = this.tenders.filter(t => t.id !== tender.id);
+        const shortId = this.extractTenderShortId(tender.id);
+        this.notificationService.showSuccess(`Tender ${shortId} deleted successfully`);
+      },
+      error: (error) => {
+        console.error('Error deleting tender:', error);
+        this.notificationService.showError('Failed to delete tender');
+      }
+    });
+  }
+
+  refreshTenders() {
+    this.loadTenders();
   }
 } 
