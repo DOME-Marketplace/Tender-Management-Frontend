@@ -6,7 +6,7 @@ import { ProviderService, Provider } from '../../../../core/services/provider.se
 import { NotificationComponent } from '../../../../shared/components/notification/notification.component';
 import { TenderService } from '../../../../core/services/tender.service';
 import { NotificationService } from '../../../../shared/services/notification.service';
-import { Tender_Create, TenderAttachment, Tender } from '../../../../shared/models/tender.model';
+import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../../../shared/models/tender.model';
 
 @Component({
   selector: 'app-provider-list',
@@ -589,16 +589,129 @@ export class ProviderListComponent implements OnInit {
     }
   }
 
-  createTenderWithSelectedProviders() {
-    const selectedProviderIds = Array.from(this.selectedProviders);
-    const tenderData = {
-      responseDeadline: this.responseDeadline,
-      attachmentFile: this.attachmentFile,
-      tenderNote: this.tenderNote,
-      selectedProviders: selectedProviderIds
-    };
-    console.log('Creating tender with data:', tenderData);
-    // TODO: Implement actual tender creation logic
-    this.closeTenderModal();
+  async createTenderWithSelectedProviders() {
+    if (!this.responseDeadline) {
+      this.notificationService.showError('Response deadline is required');
+      return;
+    }
+
+    if (this.selectedProviders.size === 0) {
+      this.notificationService.showError('Please select at least one provider');
+      return;
+    }
+
+    try {
+      let attachment: TenderAttachment | undefined;
+      
+      if (this.attachmentFile) {
+        const base64Content = await this.tenderService.fileToBase64(this.attachmentFile);
+        attachment = {
+          name: this.attachmentFile.name,
+          mimeType: this.attachmentFile.type,
+          content: base64Content,
+          size: this.attachmentFile.size
+        };
+      } else if (this.existingAttachment) {
+        attachment = this.existingAttachment;
+      }
+
+      const selectedProviderIds = Array.from(this.selectedProviders);
+      
+      // Get provider names from tenderProviders
+      const providerMap = new Map<string, string>();
+      this.tenderProviders.forEach(provider => {
+        if (provider.id) {
+          providerMap.set(provider.id, provider.tradingName || 'Unknown Provider');
+        }
+      });
+
+      if (this.editingTenderId) {
+        // EDIT MODE: Update existing tender to "pre-launched" and create child tenders
+        const parentTenderUpdate: Tender_Update = {
+          state: 'pre-launched'
+        };
+
+        this.tenderService.updateTender(this.editingTenderId, parentTenderUpdate).subscribe({
+          next: (updatedParent) => {
+            console.log('Parent tender updated to pre-launched:', updatedParent);
+            
+            // Create child tenders for each selected provider
+            const childTenders: Tender_Create[] = selectedProviderIds.map(providerId => ({
+              category: 'tendering',
+              state: 'pending',
+              responseDeadline: this.responseDeadline,
+              tenderNote: this.tenderNote,
+              attachment: attachment,
+              selectedProviders: [providerId],
+              external_id: this.editingTenderId!,
+              provider: providerMap.get(providerId) || 'Unknown Provider'
+            }));
+
+            this.tenderService.createMultipleTenders(childTenders).subscribe({
+              next: (createdTenders) => {
+                console.log('Child tenders created:', createdTenders);
+                this.notificationService.showSuccess(`Tender launched successfully with ${createdTenders.length} provider(s)`);
+                this.closeTenderModal();
+              },
+              error: (error) => {
+                console.error('Error creating child tenders:', error);
+                this.notificationService.showError('Failed to create child tenders');
+              }
+            });
+          },
+          error: (error) => {
+            console.error('Error updating parent tender:', error);
+            this.notificationService.showError('Failed to launch tender');
+          }
+        });
+      } else {
+        // CREATE MODE: Create parent tender with "pre-launched" and create child tenders
+        const parentTenderData: Tender_Create = {
+          category: 'coordinator',
+          state: 'pre-launched',
+          responseDeadline: this.responseDeadline,
+          tenderNote: this.tenderNote,
+          attachment: attachment,
+          selectedProviders: selectedProviderIds
+        };
+
+        this.tenderService.createTender(parentTenderData).subscribe({
+          next: (createdParent) => {
+            console.log('Parent tender created:', createdParent);
+            
+            // Create child tenders for each selected provider
+            const childTenders: Tender_Create[] = selectedProviderIds.map(providerId => ({
+              category: 'tendering',
+              state: 'pending',
+              responseDeadline: this.responseDeadline,
+              tenderNote: this.tenderNote,
+              attachment: attachment,
+              selectedProviders: [providerId],
+              external_id: createdParent.id!,
+              provider: providerMap.get(providerId) || 'Unknown Provider'
+            }));
+
+            this.tenderService.createMultipleTenders(childTenders).subscribe({
+              next: (createdTenders) => {
+                console.log('Child tenders created:', createdTenders);
+                this.notificationService.showSuccess(`Tender launched successfully with ${createdTenders.length} provider(s)`);
+                this.closeTenderModal();
+              },
+              error: (error) => {
+                console.error('Error creating child tenders:', error);
+                this.notificationService.showError('Failed to create child tenders');
+              }
+            });
+          },
+          error: (error) => {
+            console.error('Error creating parent tender:', error);
+            this.notificationService.showError('Failed to launch tender');
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error processing tender creation:', error);
+      this.notificationService.showError('Failed to process tender creation');
+    }
   }
 }

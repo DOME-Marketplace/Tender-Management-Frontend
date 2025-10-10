@@ -1,11 +1,13 @@
 export interface Tender {
   id?: string;
-  category: 'coordinator';
-  state: 'draft' | 'sent' | 'closed';
+  category: 'coordinator' | 'tendering';
+  state: 'draft' | 'pre-launched' | 'pending' | 'sent' | 'closed';
   responseDeadline: string;
   tenderNote?: string;
   attachment?: TenderAttachment;
   selectedProviders: string[];
+  external_id?: string;  // ID del tender parent (per tender figli)
+  provider?: string;      // Nome del provider (per tender figli)
   createdAt?: string;
   updatedAt?: string;
 }
@@ -18,12 +20,14 @@ export interface TenderAttachment {
 }
 
 export interface Tender_Create {
-  category: 'coordinator';
-  state: 'draft' | 'sent' | 'closed';
+  category: 'coordinator' | 'tendering';
+  state: 'draft' | 'pre-launched' | 'pending' | 'sent' | 'closed';
   responseDeadline: string;
   tenderNote?: string;
   attachment?: TenderAttachment;
   selectedProviders: string[];
+  external_id?: string;
+  provider?: string;
 }
 
 export interface Tender_Update {
@@ -31,6 +35,8 @@ export interface Tender_Update {
   tenderNote?: string;
   attachment?: TenderAttachment;
   selectedProviders?: string[];
-  state?: 'draft' | 'sent' | 'closed';
+  state?: 'draft' | 'pre-launched' | 'pending' | 'sent' | 'closed';
+  external_id?: string;
+  provider?: string;
 }
 

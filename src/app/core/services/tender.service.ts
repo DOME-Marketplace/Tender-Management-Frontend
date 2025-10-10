@@ -43,6 +43,13 @@ export class TenderService {
     return of(tenders).pipe(delay(100)); // Simulate API delay
   }
 
+  getTendersByExternalId(externalId: string): Observable<Tender[]> {
+    const stored = localStorage.getItem(this.STORAGE_KEY);
+    const tenders: Tender[] = stored ? JSON.parse(stored) : [];
+    const childTenders = tenders.filter(t => t.external_id === externalId);
+    return of(childTenders).pipe(delay(100));
+  }
+
   getTenderById(id: string): Observable<Tender> {
     const stored = localStorage.getItem(this.STORAGE_KEY);
     const tenders: Tender[] = stored ? JSON.parse(stored) : [];
@@ -70,6 +77,23 @@ export class TenderService {
     this.saveTendersToStorage(tenders);
     
     return of(newTender).pipe(delay(100));
+  }
+
+  createMultipleTenders(tendersData: Tender_Create[]): Observable<Tender[]> {
+    const stored = localStorage.getItem(this.STORAGE_KEY);
+    const tenders: Tender[] = stored ? JSON.parse(stored) : [];
+    
+    const newTenders: Tender[] = tendersData.map(tenderData => ({
+      ...tenderData,
+      id: this.generateId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+    
+    tenders.push(...newTenders);
+    this.saveTendersToStorage(tenders);
+    
+    return of(newTenders).pipe(delay(100));
   }
 
   updateTender(id: string, updates: Tender_Update): Observable<Tender> {

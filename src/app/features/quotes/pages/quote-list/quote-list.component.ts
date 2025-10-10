@@ -32,101 +32,67 @@ import { Tender } from '../../../../shared/models/tender.model';
           >
             {{ loading ? 'Loading...' : 'Refresh' }}
           </button>
-          <button
-            (click)="createQuote()"
-            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            Create Quote
-          </button>
         </div>
       </div>
 
-      <!-- Role Tabs -->
-      <div class="mb-6">
-        <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-          <button
-            (click)="selectRole('customer')"
-            [class]="getRoleTabClass('customer')"
-            class="flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors"
-          >
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            As Customer
-          </button>
-          <button
-            (click)="selectRole('seller')"
-            [class]="getRoleTabClass('seller')"
-            class="flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors"
-          >
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            As Provider
-          </button>
-        </div>
-      </div>
-
-      <!-- Status Filter -->
-      <div class="mb-6">
-        <div class="flex items-center space-x-4">
-          <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-          <span class="text-sm font-medium text-gray-700">Filter by status</span>
-          <select
-            [(ngModel)]="statusFilter"
-            (ngModelChange)="filterQuotesByStatus()"
-            class="form-select rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="inProgress">In Progress</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="accepted">Accepted</option>
-          </select>
-        </div>
-      </div>
 
       <!-- Tenders Section -->
-      <div *ngIf="tenders.length > 0" class="mb-8 bg-white shadow-md rounded-lg overflow-hidden">
+      <div *ngIf="!loading && !error && tenders.length > 0" class="bg-white shadow-md rounded-lg overflow-hidden">
         <div class="bg-indigo-50 px-6 py-3 border-b border-indigo-100">
           <div class="flex justify-between items-center">
             <h2 class="text-lg font-semibold text-indigo-900">My Tenders</h2>
-            <button
-              (click)="refreshTenders()"
-              class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200"
-            >
-              Refresh
-            </button>
-          </div>
         </div>
-        
+      </div>
+
         <!-- Tenders Header -->
         <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
           <div class="grid grid-cols-12 gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <div class="col-span-1">EXPAND</div>
             <div class="col-span-2">TENDER ID</div>
             <div class="col-span-2">STATE</div>
-            <div class="col-span-3">RESPONSE DEADLINE</div>
+            <div class="col-span-2">RESPONSE DEADLINE</div>
             <div class="col-span-2">ATTACHMENT</div>
             <div class="col-span-3">ACTIONS</div>
-          </div>
         </div>
-        
+      </div>
+      
         <!-- Tender Rows -->
         <div *ngFor="let tender of tenders" class="tender-row">
+          <!-- Parent Tender Row -->
           <div 
-            class="grid grid-cols-12 gap-4 items-center px-6 py-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+            class="grid grid-cols-12 gap-4 items-center px-6 py-4 border-b border-gray-100 transition-colors"
+            [class.hover:bg-gray-50]="tender.state === 'draft'"
+            [class.cursor-pointer]="tender.state === 'draft'"
+            [class.cursor-not-allowed]="tender.state !== 'draft'"
+            [class.opacity-60]="tender.state !== 'draft'"
+            [class.bg-indigo-50]="isTenderExpanded(tender.id)"
             (click)="openTenderForEdit(tender)"
-            [attr.data-tender-id]="tender.id">
+            [attr.data-tender-id]="tender.id"
+            [title]="tender.state === 'draft' ? 'Click to edit' : 'Only draft tenders can be edited'">
             
+            <!-- Expand/Collapse Button -->
+            <div class="col-span-1">
+              <button
+                *ngIf="tender.state === 'pre-launched'"
+                (click)="toggleTenderExpansion(tender, $event)"
+                class="p-1.5 text-indigo-600 hover:text-indigo-800 rounded hover:bg-indigo-100 transition-colors"
+                [title]="isTenderExpanded(tender.id) ? 'Collapse' : 'Expand to see child tenders'"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform" 
+                     [class.rotate-90]="isTenderExpanded(tender.id)"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+              </button>
+      </div>
+      
             <!-- Tender ID -->
-            <div class="col-span-2 text-sm font-medium text-gray-900">
+            <div class="col-span-2 text-sm font-medium"
+                 [class.text-gray-900]="tender.state === 'pre-launched'"
+                 [class.text-gray-500]="tender.state === 'draft'">
               Tender {{ extractTenderShortId(tender.id) }}
-            </div>
-            
+        </div>
+        
             <!-- State -->
             <div class="col-span-2">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
@@ -136,7 +102,9 @@ import { Tender } from '../../../../shared/models/tender.model';
             </div>
             
             <!-- Response Deadline -->
-            <div class="col-span-3 text-sm text-gray-600">
+            <div class="col-span-2 text-sm"
+                 [class.text-gray-900]="tender.state === 'pre-launched'"
+                 [class.text-gray-500]="tender.state === 'draft'">
               {{ formatTenderDeadline(tender.responseDeadline) }}
             </div>
             
@@ -154,7 +122,7 @@ import { Tender } from '../../../../shared/models/tender.model';
               </button>
               <span *ngIf="!tender.attachment" class="text-xs text-gray-400">No attachment</span>
             </div>
-            
+              
             <!-- Actions -->
             <div class="col-span-3 flex gap-2" (click)="$event.stopPropagation()">
               <button
@@ -168,214 +136,120 @@ import { Tender } from '../../../../shared/models/tender.model';
               </button>
             </div>
           </div>
+          
+          <!-- Child Tenders Section -->
+          <div *ngIf="isTenderExpanded(tender.id)" class="bg-gray-50 border-b border-gray-200">
+            <div class="px-6 py-4">
+              <h4 class="text-sm font-semibold text-gray-700 mb-3">Provider Tenders ({{ getChildTenders(tender.id).length }})</h4>
+              
+              <div *ngIf="getChildTenders(tender.id).length === 0" class="text-sm text-gray-500 italic py-4">
+                No child tenders found. Loading...
+              </div>
+              
+              <!-- Child Tenders Header -->
+              <div *ngIf="getChildTenders(tender.id).length > 0" class="bg-gray-100 px-4 py-2 rounded-t-lg">
+                <div class="grid grid-cols-12 gap-4 text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  <div class="col-span-3">TENDER ID</div>
+                  <div class="col-span-2">STATE</div>
+                  <div class="col-span-3">RESPONSE DEADLINE</div>
+                  <div class="col-span-2">PROVIDER</div>
+                  <div class="col-span-2">ACTIONS</div>
+                </div>
+              </div>
+              
+              <div *ngFor="let childTender of getChildTenders(tender.id); let last = last" 
+                   class="bg-white border-l border-r border-gray-200"
+                   [class.border-b]="last"
+                   [class.rounded-b-lg]="last">
+                <div class="grid grid-cols-12 gap-4 items-center px-4 py-3">
+                  <!-- Tender ID (Parent Tender Name) -->
+                  <div class="col-span-3 text-sm font-medium"
+                       [class.text-gray-900]="tender.state === 'pre-launched'"
+                       [class.text-gray-500]="tender.state === 'draft'">
+                    Tender {{ extractTenderShortId(tender.id) }}
+                  </div>
+                  
+                  <!-- State -->
+                  <div class="col-span-2">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                          [ngClass]="getTenderStateClass(childTender.state)">
+                      {{ childTender.state }}
+                    </span>
+                  </div>
+                  
+                  <!-- Response Deadline -->
+                  <div class="col-span-3 text-sm"
+                       [class.text-gray-900]="tender.state === 'pre-launched'"
+                       [class.text-gray-500]="tender.state === 'draft'">
+                    {{ formatTenderDeadline(childTender.responseDeadline) }}
+                  </div>
+                  
+                  <!-- Provider Name -->
+                  <div class="col-span-2 text-sm text-gray-700">
+                    <div class="flex items-center">
+                      <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                      {{ childTender.provider }}
+                    </div>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="col-span-2 flex gap-2 justify-start items-center">
+                <button
+                      (click)="openChatModal(childTender)"
+                      class="p-1 text-blue-500 hover:text-blue-700 rounded hover:bg-gray-100 transition-colors"
+                      title="Open chat"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </button>
+                <button
+                      (click)="confirmDeleteTender(childTender)"
+                      class="p-1 text-red-500 hover:text-red-700 rounded hover:bg-gray-100 transition-colors"
+                      title="Delete tender"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      
+
       <!-- Loading State -->
-      <div *ngIf="loading" class="flex justify-center items-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div *ngIf="loading" class="flex justify-center items-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
       
       <!-- Error State -->
-      <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4">
+      <div *ngIf="!loading && error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
         <div class="flex">
           <div class="flex-shrink-0">
             <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-            </svg>
-          </div>
+                  </svg>
+            </div>
           <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800">Error loading quotes</h3>
+            <h3 class="text-sm font-medium text-red-800">Error</h3>
             <p class="mt-1 text-sm text-red-700">{{ error }}</p>
           </div>
         </div>
       </div>
-      
-      <!-- Quotes List -->
-      <div *ngIf="!loading && !error" class="bg-white shadow-md rounded-lg overflow-hidden">
-        <div *ngIf="filteredQuotes.length === 0" class="text-center py-12">
+
+      <!-- No Tenders Message -->
+      <div *ngIf="!loading && !error && tenders.length === 0" class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="text-center py-12">
           <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No quotes found</h3>
-          <p class="mt-1 text-sm text-gray-500">No orders found</p>
-        </div>
-        
-        <!-- Quotes Header -->
-        <div *ngIf="filteredQuotes.length > 0" class="bg-gray-50 px-6 py-3">
-          <div class="grid grid-cols-12 gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <div class="col-span-2">ORDER ID</div>
-            <div class="col-span-1">STATUS</div>
-            <div class="col-span-2">REQUESTED DATE</div>
-            <div class="col-span-3">EXPECTED DATE</div>
-            <div class="col-span-4">ACTIONS</div>
-          </div>
-        </div>
-        
-        <!-- Quote Rows -->
-        <div *ngFor="let quote of filteredQuotes" class="quote-row">
-          <div class="grid grid-cols-12 gap-4 items-center px-6 py-4 border-b border-gray-100 transition-colors"
-               [class.bg-gray-50]="isQuoteFinalized(quote)"
-               [class.hover:bg-gray-50]="!isQuoteFinalized(quote)"
-               [attr.data-quote-id]="quote.id">
-            
-            <!-- Quote ID -->
-            <div class="col-span-2 text-sm font-medium text-gray-900">
-              Quote {{ extractShortId(quote.id) }}
-            </div>
-            
-            <!-- Status -->
-            <div class="col-span-1">
-              <span class="status-badge px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                    [ngClass]="getStateClass(getPrimaryState(quote))">
-                {{ getPrimaryState(quote) }}
-              </span>
-            </div>
-            
-            <!-- Requested Date -->
-            <div class="col-span-2 text-sm text-gray-600">
-              {{ quote.requestedQuoteCompletionDate | date:'dd/MM/yyyy' }}
-            </div>
-            
-            <!-- Expected Date -->
-            <div class="col-span-3 text-sm text-gray-600">
-              {{ quote.expectedQuoteCompletionDate | date:'dd/MM/yyyy' }}
-            </div>
-            
-            <!-- Actions -->
-            <div class="col-span-4 flex flex-wrap gap-1">
-              <!-- View Details -->
-              <button
-                [disabled]="isActionDisabled(quote, 'viewDetails')"
-                (click)="viewDetails(quote)"
-                [class]="getButtonClass(quote, 'viewDetails')"
-                [title]="getActionTitle(quote, 'viewDetails')"
-              >
-                Details
-              </button>
-              
-
-              
-              <!-- Chat -->
-              <button
-                [disabled]="isActionDisabled(quote, 'chat')"
-                (click)="openChat(quote)"
-                [class]="getIconButtonClass(quote, 'chat', 'text-blue-500 hover:text-blue-700')"
-                title="Chat"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4-.8L3 21l1.8-4A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </button>
-              
-              <!-- Download Attachment -->
-              <button
-                *ngIf="hasAttachment(quote)"
-                [disabled]="isActionDisabled(quote, 'downloadAttachment')"
-                (click)="downloadAttachment(quote)"
-                [class]="getIconButtonClass(quote, 'downloadAttachment', 'text-purple-500 hover:text-purple-700')"
-                title="Download attachment"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </button>
-              
-              <!-- Add Attachment (Provider only, when quote is inProgress or approved) -->
-              <button
-                *ngIf="selectedRole === 'seller' && (getPrimaryState(quote) === 'inProgress' || getPrimaryState(quote) === 'approved')"
-                [disabled]="isActionDisabled(quote, 'addAttachment')"
-                (click)="addAttachment(quote)"
-                [class]="getIconButtonClass(quote, 'addAttachment', 'text-green-500 hover:text-green-700')"
-                title="Add attachment"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
-              </button>
-
-              <!-- Add Requested Completion Date (Customer only) -->
-              <button
-                *ngIf="selectedRole === 'customer' && !quote.requestedQuoteCompletionDate"
-                [disabled]="isActionDisabled(quote, 'addRequestedDate')"
-                (click)="addRequestedDate(quote)"
-                [class]="getIconButtonClass(quote, 'addRequestedDate', 'text-indigo-500 hover:text-indigo-700')"
-                title="Add requested completion date"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </button>
-
-              <!-- Add Expected Completion Date (Provider only) -->
-              <button
-                *ngIf="selectedRole === 'seller' && !quote.expectedQuoteCompletionDate"
-                [disabled]="isActionDisabled(quote, 'addExpectedDate')"
-                (click)="addExpectedDate(quote)"
-                [class]="getIconButtonClass(quote, 'addExpectedDate', 'text-orange-500 hover:text-orange-700')"
-                title="Add expected completion date"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </button>
-              
-              <!-- Accept/Cancel buttons or Finalized indicator -->
-              <ng-container *ngIf="!isQuoteFinalized(quote)">
-                <!-- Accept (Provider only, when quote is pending) -->
-                <button
-                  *ngIf="selectedRole === 'seller' && getPrimaryState(quote) === 'pending'"
-                  [disabled]="isActionDisabled(quote, 'accept')"
-                  (click)="acceptQuote(quote)"
-                  [class]="getIconButtonClass(quote, 'accept', 'text-emerald-600 hover:text-emerald-700')"
-                  title="Accept quote request"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-
-                <!-- Accept (Customer only, when quote is approved) -->
-                <button
-                  *ngIf="selectedRole === 'customer' && getPrimaryState(quote) === 'approved'"
-                  [disabled]="isActionDisabled(quote, 'acceptCustomer')"
-                  (click)="acceptQuoteCustomer(quote)"
-                  [class]="getIconButtonClass(quote, 'acceptCustomer', 'text-emerald-600 hover:text-emerald-700')"
-                  title="Accept quotation"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-                
-                <!-- Cancel -->
-                <button
-                  [disabled]="isActionDisabled(quote, 'cancel')"
-                  (click)="cancelQuote(quote)"
-                  [class]="getIconButtonClass(quote, 'cancel', 'text-red-500 hover:text-red-700')"
-                  title="Cancel quote"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </ng-container>
-              
-              <!-- Finalized status indicator -->
-              <ng-container *ngIf="isQuoteFinalized(quote)">
-                <button
-                  class="p-2 text-xs text-gray-400 cursor-not-allowed"
-                  [title]="'Quote is already ' + (isQuoteCancelled(quote) ? 'cancelled' : 'accepted')"
-                  disabled
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          [attr.d]="isQuoteCancelled(quote) ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7'" />
-                  </svg>
-                </button>
-              </ng-container>
-            </div>
-          </div>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No tenders found</h3>
+          <p class="mt-1 text-sm text-gray-500">Create your first tender from the Provider List page.</p>
         </div>
       </div>
     </div>
@@ -450,6 +324,86 @@ import { Tender } from '../../../../shared/models/tender.model';
       (close)="closeAttachmentModal()"
       (uploadSuccess)="onAttachmentUploaded($event)"
     ></app-attachment-modal>
+
+    <!-- Tender Chat Modal -->
+    <div *ngIf="showTenderChatModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-medium text-gray-900">
+            Chat - {{ selectedChatTender?.provider || 'Tender' }}
+          </h3>
+          <button
+            (click)="closeTenderChatModal()"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Chat Messages Area -->
+        <div class="bg-gray-50 rounded-lg p-4 h-96 overflow-y-auto mb-4">
+          <div *ngIf="chatMessages.length === 0" class="text-center text-gray-500 mt-20">
+            <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <p>No messages yet. Start the conversation!</p>
+          </div>
+          
+          <div *ngFor="let message of chatMessages" class="mb-3">
+            <div [class.text-right]="message.sender === 'user'">
+              <div class="inline-block max-w-xs lg:max-w-md">
+                <div class="text-xs text-gray-500 mb-1">
+                  {{ message.sender === 'user' ? 'You' : message.sender }}
+                </div>
+                <div 
+                  class="rounded-lg px-4 py-2"
+                  [class.bg-indigo-600]="message.sender === 'user'"
+                  [class.text-white]="message.sender === 'user'"
+                  [class.bg-white]="message.sender !== 'user'"
+                  [class.text-gray-900]="message.sender !== 'user'"
+                  [class.border]="message.sender !== 'user'"
+                  [class.border-gray-200]="message.sender !== 'user'"
+                >
+                  <p class="text-sm">{{ message.text }}</p>
+                  <p class="text-xs mt-1 opacity-75">{{ formatMessageTime(message.timestamp) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Message Input Area -->
+        <div class="flex gap-2">
+          <textarea
+            [(ngModel)]="newChatMessage"
+            (keydown.enter)="$event.preventDefault(); sendChatMessage()"
+            placeholder="Type your message..."
+            class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            rows="2"
+          ></textarea>
+          <button
+            (click)="sendChatMessage()"
+            [disabled]="!newChatMessage.trim()"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="mt-4 flex justify-end">
+          <button
+            (click)="closeTenderChatModal()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Date Picker Modal -->
     <div *ngIf="showDatePickerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -539,6 +493,8 @@ export class QuoteListComponent implements OnInit {
   quotes: Quote[] = [];
   filteredQuotes: Quote[] = [];
   tenders: Tender[] = [];
+  expandedTenders: Set<string> = new Set();
+  childTendersMap: Map<string, Tender[]> = new Map();
   loading = false;
   error: string | null = null;
   showDeleteConfirm = false;
@@ -576,66 +532,78 @@ export class QuoteListComponent implements OnInit {
   datePickerType: 'requested' | 'expected' | null = null;
   selectedDate: string = '';
 
+  // Tender Chat Modal
+  showTenderChatModal = false;
+  selectedChatTender: Tender | null = null;
+  chatMessages: Array<{ sender: string; text: string; timestamp: Date }> = [];
+  newChatMessage: string = '';
+
   ngOnInit() {
-    this.currentUserId = this.loginService.getUserId();
-    if (this.currentUserId) {
-      this.loadQuotes();
-      this.loadTenders();
-    } else {
-      this.error = 'User not authenticated';
-    }
+    this.loadTenders();
   }
 
   loadTenders() {
+    this.loading = true;
     this.tenderService.getTenders().subscribe({
       next: (tenders) => {
-        this.tenders = tenders;
-        console.log('Loaded tenders:', tenders);
+        // Filter only coordinator tenders for the main list
+        this.tenders = tenders.filter(t => t.category === 'coordinator');
+        this.loading = false;
+        console.log('Loaded coordinator tenders:', this.tenders);
       },
       error: (error) => {
         console.error('Failed to load tenders:', error);
-        // Don't show error for tenders, just log it
+        this.error = 'Failed to load tenders. Please try again.';
+        this.loading = false;
       }
     });
   }
 
-  loadQuotes() {
-    if (!this.currentUserId) {
-      this.error = 'User not authenticated';
-      return;
+  toggleTenderExpansion(tender: Tender, event: Event) {
+    event.stopPropagation();
+    
+    if (!tender.id) return;
+    
+    if (this.expandedTenders.has(tender.id)) {
+      this.expandedTenders.delete(tender.id);
+    } else {
+      this.expandedTenders.add(tender.id);
+      
+      // Load child tenders if not already loaded
+      if (!this.childTendersMap.has(tender.id)) {
+        this.loadChildTenders(tender.id);
+      }
     }
+  }
 
-    this.loading = true;
-    this.error = null;
-
-    this.quoteService.getQuotesByUserAndRole(this.currentUserId, this.selectedRole).subscribe({
-      next: (quotes) => {
-        this.quotes = quotes;
-        
-        // Debug: Log quote states
-        console.log('Loaded quotes:', quotes.length);
-        quotes.forEach(quote => {
-          console.log(`Quote ${this.extractShortId(quote.id)}: main state = "${quote.state}", primary state = "${this.getPrimaryState(quote)}"`);
-        });
-        
-        this.filterQuotesByStatus();
-        this.loading = false;
+  loadChildTenders(parentId: string) {
+    this.tenderService.getTendersByExternalId(parentId).subscribe({
+      next: (childTenders) => {
+        this.childTendersMap.set(parentId, childTenders);
+        console.log(`Loaded ${childTenders.length} child tenders for parent ${parentId}`);
       },
       error: (error) => {
-        console.error('Failed to load quotes:', error);
-        this.error = 'Failed to load quotes. Please try again.';
-        this.loading = false;
+        console.error('Error loading child tenders:', error);
+        this.notificationService.showError('Failed to load child tenders');
       }
     });
+  }
+
+  isTenderExpanded(tenderId: string | undefined): boolean {
+    return tenderId ? this.expandedTenders.has(tenderId) : false;
+  }
+
+  getChildTenders(tenderId: string | undefined): Tender[] {
+    return tenderId ? this.childTendersMap.get(tenderId) || [] : [];
   }
 
   refreshQuotes() {
-    this.loadQuotes();
+    this.loadTenders();
   }
 
   selectRole(role: 'customer' | 'seller') {
     this.selectedRole = role;
-    this.loadQuotes();
+    // Tenders don't need role-based loading
   }
 
   getRoleTabClass(role: 'customer' | 'seller'): string {
@@ -653,10 +621,6 @@ export class QuoteListComponent implements OnInit {
         return primaryState === this.statusFilter;
       });
     }
-  }
-
-  createQuote() {
-    this.router.navigate(['/quotes/new']);
   }
 
   viewDetails(quote: Quote) {
@@ -1123,6 +1087,10 @@ export class QuoteListComponent implements OnInit {
     switch (state) {
       case 'draft':
         return 'bg-gray-100 text-gray-800';
+      case 'pre-launched':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'pending':
+        return 'bg-orange-100 text-orange-800';
       case 'sent':
         return 'bg-blue-100 text-blue-800';
       case 'closed':
@@ -1133,6 +1101,12 @@ export class QuoteListComponent implements OnInit {
   }
 
   openTenderForEdit(tender: Tender) {
+    // Only allow editing of draft tenders
+    if (tender.state !== 'draft') {
+      this.notificationService.showError('Only draft tenders can be edited');
+      return;
+    }
+    
     // Navigate to provider list with tender data
     this.router.navigate(['/providers'], {
       state: { tender: tender }
@@ -1178,5 +1152,74 @@ export class QuoteListComponent implements OnInit {
 
   refreshTenders() {
     this.loadTenders();
+  }
+
+  // Tender Chat Modal Methods
+  openChatModal(tender: Tender) {
+    this.selectedChatTender = tender;
+    this.showTenderChatModal = true;
+    this.loadChatMessages(tender.id);
+  }
+
+  closeTenderChatModal() {
+    this.showTenderChatModal = false;
+    this.selectedChatTender = null;
+    this.chatMessages = [];
+    this.newChatMessage = '';
+  }
+
+  loadChatMessages(tenderId: string | undefined) {
+    if (!tenderId) return;
+    
+    // Load chat messages from localStorage
+    const storageKey = `tender_chat_${tenderId}`;
+    const stored = localStorage.getItem(storageKey);
+    
+    if (stored) {
+      this.chatMessages = JSON.parse(stored).map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      }));
+    } else {
+      this.chatMessages = [];
+    }
+  }
+
+  sendChatMessage() {
+    if (!this.newChatMessage.trim() || !this.selectedChatTender?.id) return;
+
+    const message = {
+      sender: 'user',
+      text: this.newChatMessage.trim(),
+      timestamp: new Date()
+    };
+
+    this.chatMessages.push(message);
+    
+    // Save to localStorage
+    const storageKey = `tender_chat_${this.selectedChatTender.id}`;
+    localStorage.setItem(storageKey, JSON.stringify(this.chatMessages));
+
+    this.newChatMessage = '';
+    
+    // Scroll to bottom of chat
+    setTimeout(() => {
+      const chatContainer = document.querySelector('.bg-gray-50.rounded-lg.p-4.h-96');
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }, 100);
+  }
+
+  formatMessageTime(timestamp: Date): string {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '';
+    }
   }
 } 
