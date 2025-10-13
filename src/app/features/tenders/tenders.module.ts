@@ -1,23 +1,17 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { quotesRoutes } from './quotes.routes';
+import { tendersRoutes } from './tenders.routes';
 import { QuoteListComponent } from './pages/quote-list/quote-list.component';
-import { QuoteDetailsComponent } from './pages/quote-details/quote-details.component';
-import { QuoteFormComponent } from './pages/quote-form/quote-form.component';
 import { NotificationComponent } from '../../shared/components/notification/notification.component';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @NgModule({
   imports: [
     CommonModule,
-    RouterModule.forChild(quotesRoutes),
+    RouterModule.forChild(tendersRoutes),
     QuoteListComponent,
-    QuoteDetailsComponent,
-    QuoteFormComponent,
-    NotificationComponent,
-    ConfirmDialogComponent
+    NotificationComponent
   ],
   declarations: []
 })
-export class QuotesModule { } 
+export class TendersModule { } 

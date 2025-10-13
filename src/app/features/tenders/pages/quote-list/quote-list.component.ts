@@ -2,9 +2,12 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { QuoteService } from '../../services/quote.service';
+import { Observable } from 'rxjs';
+import { TenderService } from '../../../../core/services/tender.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { LoginService } from '../../../../core/services/login.service';
 import { NotificationService } from '../../../../shared/services/notification.service';
+import { Tender, TenderAttachment } from '../../../../shared/models/tender.model';
 import { Quote, QuoteStateType } from '../../../../shared/models/quote.model';
 import { NotificationComponent } from '../../../../shared/components/notification/notification.component';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -15,7 +18,15 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
 @Component({
   selector: 'app-quote-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, NotificationComponent, ConfirmDialogComponent, QuoteDetailsModalComponent, ChatModalComponent, AttachmentModalComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    NotificationComponent, 
+    ConfirmDialogComponent, 
+    QuoteDetailsModalComponent, 
+    ChatModalComponent, 
+    AttachmentModalComponent
+  ],
   template: `
     <app-notification></app-notification>
     
@@ -121,7 +132,7 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
         <!-- Quotes Header -->
         <div *ngIf="filteredQuotes.length > 0" class="bg-gray-50 px-6 py-3">
           <div class="grid grid-cols-12 gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <div class="col-span-2">ORDER ID</div>
+            <div class="col-span-2">TITLE</div>
             <div class="col-span-1">STATUS</div>
             <div class="col-span-2">REQUESTED DATE</div>
             <div class="col-span-3">EXPECTED DATE</div>
@@ -136,16 +147,16 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                [class.hover:bg-gray-50]="!isQuoteFinalized(quote)"
                [attr.data-quote-id]="quote.id">
             
-            <!-- Quote ID -->
+            <!-- Title -->
             <div class="col-span-2 text-sm font-medium text-gray-900">
-              Quote {{ extractShortId(quote.id) }}
+              {{ quote.description || '(no title)' }}
             </div>
             
             <!-- Status -->
             <div class="col-span-1">
               <span class="status-badge px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                    [ngClass]="getStateClass(getPrimaryState(quote))">
-                {{ getPrimaryState(quote) }}
+                    [ngClass]="getStateClass(getQuoteItemState(quote))">
+                {{ getQuoteItemState(quote) }}
               </span>
             </div>
             
@@ -161,6 +172,19 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
             
             <!-- Actions -->
             <div class="col-span-4 flex flex-wrap gap-1">
+              <!-- Expand/Collapse button for coordinator quotes (not in pending/draft) -->
+              <button
+                *ngIf="isCoordinatorExpandable(quote)"
+                (click)="toggleExpand(quote)"
+                class="px-2 py-1 text-xs font-medium transition-colors rounded border text-indigo-600 hover:text-indigo-800 border-indigo-200 hover:bg-indigo-50"
+                [title]="isExpanded(quote.id) ? 'Collapse related quotes' : 'Expand to view related quotes'"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline transition-transform" [class.rotate-180]="isExpanded(quote.id)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+                {{ isExpanded(quote.id) ? 'Collapse' : 'Expand' }}
+              </button>
+
               <!-- View Details -->
               <button
                 [disabled]="isActionDisabled(quote, 'viewDetails')"
@@ -171,6 +195,15 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                 Details
               </button>
               
+              <!-- Edit (only for coordinator quotes in pending/draft status) -->
+              <button
+                *ngIf="quote.category === 'coordinator' && !isCoordinatorExpandable(quote)"
+                (click)="editTender(quote)"
+                class="px-2 py-1 text-xs font-medium transition-colors rounded border text-green-600 hover:text-green-800 border-green-200 hover:bg-green-50"
+                title="Edit tender"
+              >
+                Edit
+              </button>
 
               
               <!-- Chat -->
@@ -211,31 +244,7 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                 </svg>
               </button>
 
-              <!-- Add Requested Completion Date (Customer only) -->
-              <button
-                *ngIf="selectedRole === 'customer' && !quote.requestedQuoteCompletionDate"
-                [disabled]="isActionDisabled(quote, 'addRequestedDate')"
-                (click)="addRequestedDate(quote)"
-                [class]="getIconButtonClass(quote, 'addRequestedDate', 'text-indigo-500 hover:text-indigo-700')"
-                title="Add requested completion date"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </button>
-
-              <!-- Add Expected Completion Date (Provider only) -->
-              <button
-                *ngIf="selectedRole === 'seller' && !quote.expectedQuoteCompletionDate"
-                [disabled]="isActionDisabled(quote, 'addExpectedDate')"
-                (click)="addExpectedDate(quote)"
-                [class]="getIconButtonClass(quote, 'addExpectedDate', 'text-orange-500 hover:text-orange-700')"
-                title="Add expected completion date"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </button>
+              
               
               <!-- Accept/Cancel buttons or Finalized indicator -->
               <ng-container *ngIf="!isQuoteFinalized(quote)">
@@ -291,6 +300,108 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                   </svg>
                 </button>
               </ng-container>
+            </div>
+          </div>
+
+          <!-- Expanded Related Quotes View -->
+          <div *ngIf="isExpanded(quote.id)" class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div class="ml-8">
+              <h4 class="text-sm font-semibold text-gray-700 mb-3">Related Provider Quotes</h4>
+              
+              <!-- Loading State -->
+              <div *ngIf="isLoadingRelatedQuotes(quote.id)" class="flex items-center justify-center py-4">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                <span class="ml-2 text-sm text-gray-600">Loading related quotes...</span>
+              </div>
+
+              <!-- Related Quotes Table -->
+              <div *ngIf="!isLoadingRelatedQuotes(quote.id) && getRelatedQuotes(quote.id).length > 0" class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <!-- Header -->
+                <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                  <div class="grid grid-cols-12 gap-4 text-xs font-medium text-gray-600 uppercase">
+                    <div class="col-span-3">Provider</div>
+                    <div class="col-span-2">Status</div>
+                    <div class="col-span-2">Requested Date</div>
+                    <div class="col-span-2">Expected Date</div>
+                    <div class="col-span-3">Actions</div>
+                  </div>
+                </div>
+
+                <!-- Related Quote Rows -->
+                <div *ngFor="let relatedQuote of getRelatedQuotes(quote.id); let last = last" 
+                     class="px-4 py-3 hover:bg-gray-50 transition-colors"
+                     [class.border-b]="!last"
+                     [class.border-gray-200]="!last">
+                  <div class="grid grid-cols-12 gap-4 items-center text-sm">
+                    <!-- Provider -->
+                    <div class="col-span-3 text-gray-900 font-medium">
+                      {{ getProviderName(relatedQuote) }}
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="col-span-2">
+                      <span class="status-badge px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full"
+                            [ngClass]="getStateClass(getQuoteItemState(relatedQuote))">
+                        {{ getQuoteItemState(relatedQuote) }}
+                      </span>
+                    </div>
+                    
+                    <!-- Requested Date -->
+                    <div class="col-span-2 text-gray-600 text-xs">
+                      {{ relatedQuote.requestedQuoteCompletionDate | date:'dd/MM/yyyy' }}
+                    </div>
+                    
+                    <!-- Expected Date -->
+                    <div class="col-span-2 text-gray-600 text-xs">
+                      {{ relatedQuote.expectedQuoteCompletionDate | date:'dd/MM/yyyy' }}
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="col-span-3 flex gap-1">
+                      <!-- View Details -->
+                      <button
+                        (click)="viewDetails(relatedQuote)"
+                        class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded hover:bg-blue-50 transition-colors"
+                        title="View details"
+                      >
+                        Details
+                      </button>
+                      
+                      <!-- Chat -->
+                      <button
+                        (click)="openChat(relatedQuote)"
+                        class="p-1 text-blue-500 hover:text-blue-700 rounded hover:bg-gray-100 transition-colors"
+                        title="Chat"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4-.8L3 21l1.8-4A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      </button>
+                      
+                      <!-- Download Attachment -->
+                      <button
+                        *ngIf="hasAttachment(relatedQuote)"
+                        (click)="downloadAttachment(relatedQuote)"
+                        class="p-1 text-purple-500 hover:text-purple-700 rounded hover:bg-gray-100 transition-colors"
+                        title="Download attachment"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- No Related Quotes -->
+              <div *ngIf="!isLoadingRelatedQuotes(quote.id) && getRelatedQuotes(quote.id).length === 0" 
+                   class="text-center py-6 text-sm text-gray-500 bg-white rounded-lg border border-gray-200">
+                <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p>No related provider quotes found</p>
+              </div>
             </div>
           </div>
         </div>
@@ -367,50 +478,6 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
       (close)="closeAttachmentModal()"
       (uploadSuccess)="onAttachmentUploaded($event)"
     ></app-attachment-modal>
-
-    <!-- Date Picker Modal -->
-    <div *ngIf="showDatePickerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ datePickerType === 'requested' ? 'Add Requested Completion Date' : 'Add Expected Completion Date' }}
-          </h3>
-          <p class="text-sm text-gray-600 mb-4">
-            {{ datePickerType === 'requested' ? 'Select when you need this quote to be completed:' : 'Select when you expect to complete this quote:' }}
-          </p>
-          
-          <div class="mb-6">
-            <label for="completion-date" class="block text-sm font-medium text-gray-700 mb-2">
-              Completion Date
-            </label>
-            <input 
-              id="completion-date"
-              type="date" 
-              [(ngModel)]="selectedDate"
-              [min]="getTomorrowDate()"
-              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-            />
-            <p class="text-xs text-gray-500 mt-1">Date must be in the future</p>
-          </div>
-
-          <div class="flex justify-end space-x-3">
-            <button
-              (click)="closeDatePickerModal()"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Cancel
-            </button>
-            <button
-              (click)="confirmDateUpdate()"
-              [disabled]="!selectedDate || !isDateValid()"
-              class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              Save Date
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   `,
   styles: [`
     .status-badge {
@@ -444,11 +511,32 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
     .status-unknown {
       @apply bg-gray-100 text-gray-600;
     }
+
+    .status-draft {
+      @apply bg-yellow-100 text-yellow-800;
+    }
+
+    .status-pre-launched {
+      @apply bg-blue-100 text-blue-800;
+    }
+
+    .status-launched {
+      @apply bg-green-100 text-green-800;
+    }
+
+    .status-closed {
+      @apply bg-gray-100 text-gray-800;
+    }
+
+    .rotate-180 {
+      transform: rotate(180deg);
+    }
   `]
 })
 export class QuoteListComponent implements OnInit {
   private router = inject(Router);
-  private quoteService = inject(QuoteService);
+  private tenderService = inject(TenderService);
+  private authService = inject(AuthService);
   private loginService = inject(LoginService);
   private notificationService = inject(NotificationService);
 
@@ -485,11 +573,12 @@ export class QuoteListComponent implements OnInit {
   showAttachmentModal = false;
   selectedAttachmentQuote: Quote | null = null;
 
-  // Date Picker Modal
-  showDatePickerModal = false;
-  selectedDateQuote: Quote | null = null;
-  datePickerType: 'requested' | 'expected' | null = null;
-  selectedDate: string = '';
+  // Expanded rows for coordinator quotes
+  expandedQuoteIds: Set<string> = new Set();
+  relatedQuotesMap: Map<string, Quote[]> = new Map();
+  loadingRelatedQuotes: Set<string> = new Set();
+
+  
 
   ngOnInit() {
     this.currentUserId = this.loginService.getUserId();
@@ -509,25 +598,79 @@ export class QuoteListComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    this.quoteService.getQuotesByUserAndRole(this.currentUserId, this.selectedRole).subscribe({
-      next: (quotes) => {
+    // Use specific API endpoints based on role
+    let quotesObservable: Observable<Quote[]>;
+    
+    if (this.selectedRole === 'customer') {
+      // Customer view: Get coordinator quotes they created (raw)
+      quotesObservable = this.tenderService.getCoordinatorQuotesRaw(this.currentUserId);
+    } else {
+      // Seller/Provider view: Get tendering quotes they received (raw)
+      quotesObservable = this.tenderService.getTenderingQuotesRaw(this.currentUserId);
+    }
+    
+    quotesObservable.subscribe({
+      next: (quotes: Quote[]) => {
+        // Use quotes as-is to preserve quoteItem.state
         this.quotes = quotes;
         
-        // Debug: Log quote states
-        console.log('Loaded quotes:', quotes.length);
-        quotes.forEach(quote => {
-          console.log(`Quote ${this.extractShortId(quote.id)}: main state = "${quote.state}", primary state = "${this.getPrimaryState(quote)}"`);
+        // Debug: Log quote states and externalId
+        console.log(`Loaded ${this.quotes.length} quotes as ${this.selectedRole}`);
+        this.quotes.forEach(quote => {
+          console.log(`Quote ${this.extractShortId(quote.id)}:`, {
+            category: quote.category,
+            state: quote.state,
+            quoteItemState: this.getQuoteItemState(quote),
+            externalId: quote.externalId,
+            id: quote.id
+          });
         });
         
         this.filterQuotesByStatus();
         this.loading = false;
       },
-      error: (error) => {
+      error: (error: Error) => {
         console.error('Failed to load quotes:', error);
         this.error = 'Failed to load quotes. Please try again.';
         this.loading = false;
       }
     });
+  }
+
+  private mapTenderToQuote(tender: Tender): Quote {
+    return {
+      id: tender.id,
+      href: '',
+      description: tender.tenderNote || '',
+      quoteDate: tender.createdAt || new Date().toISOString(),
+      expectedQuoteCompletionDate: tender.expectedQuoteCompletionDate,
+      requestedQuoteCompletionDate: tender.requestedQuoteCompletionDate,
+      state: this.mapTenderStateToQuoteState(tender.state),
+      category: tender.category,
+      externalId: tender.external_id,
+      relatedParty: tender.selectedProviders.map(id => ({
+        id,
+        role: 'Seller',
+        name: tender.provider,
+        '@referredType': 'Organization'
+      })),
+      // Provide a minimal quoteItem array carrying the state so the UI can display it.
+      // We intentionally cast to any to avoid enforcing the full TMF structure here.
+      quoteItem: [
+        { state: this.mapTenderStateToQuoteState(tender.state) } as any
+      ],
+      note: []
+    };
+  }
+
+  private mapTenderStateToQuoteState(tenderState: 'draft' | 'pre-launched' | 'pending' | 'sent' | 'closed'): QuoteStateType {
+    switch (tenderState) {
+      case 'draft': return 'inProgress';
+      case 'pending': return 'pending';
+      case 'sent': return 'approved';
+      case 'closed': return 'accepted';
+      default: return 'inProgress';
+    }
   }
 
   refreshQuotes() {
@@ -565,6 +708,58 @@ export class QuoteListComponent implements OnInit {
     this.showQuoteDetailsModal = true;
   }
 
+  editTender(quote: Quote) {
+    // Extract attachment from quoteItem if it exists
+    let attachment: TenderAttachment | undefined = undefined;
+    if (Array.isArray(quote.quoteItem) && quote.quoteItem.length > 0) {
+      const firstItem = quote.quoteItem[0];
+      if (Array.isArray(firstItem.attachment) && firstItem.attachment.length > 0) {
+        const att = firstItem.attachment[0];
+        attachment = {
+          name: att.name || 'attachment.pdf',
+          mimeType: att.mimeType || 'application/pdf',
+          content: att.content || '',
+          size: att.size?.amount
+        };
+        console.log('Extracted attachment for edit:', attachment.name);
+      }
+    }
+
+    // Convert Quote to Tender format for editing
+    const tender: Tender = {
+      id: quote.id,
+      category: quote.category === 'coordinator' ? 'coordinator' : 'tendering',
+      state: this.mapQuoteStateToTenderState(quote.state),
+      responseDeadline: quote.requestedQuoteCompletionDate || quote.expectedQuoteCompletionDate || new Date().toISOString(),
+      tenderNote: quote.description || '',
+      attachment: attachment,
+      selectedProviders: quote.relatedParty?.filter(p => p.role === 'Seller').map(p => p.id) || [],
+      expectedQuoteCompletionDate: quote.expectedQuoteCompletionDate,
+      requestedQuoteCompletionDate: quote.requestedQuoteCompletionDate
+    };
+
+    console.log('Navigating to edit tender with data:', tender);
+
+    // Navigate to providers page with tender data
+    this.router.navigate(['/providers'], {
+      state: { tender }
+    });
+  }
+
+  private mapQuoteStateToTenderState(quoteState: QuoteStateType | undefined): 'draft' | 'pre-launched' | 'pending' | 'sent' | 'closed' {
+    if (!quoteState) return 'draft';
+    
+    switch (quoteState) {
+      case 'inProgress': return 'draft';
+      case 'pending': return 'pending';
+      case 'approved': return 'sent';
+      case 'accepted':
+      case 'cancelled':
+      case 'rejected': return 'closed';
+      default: return 'draft';
+    }
+  }
+
   viewQuote(quote: Quote) {
     this.selectedQuoteId = quote.id!;
     this.showQuoteDetailsModal = true;
@@ -598,8 +793,8 @@ export class QuoteListComponent implements OnInit {
     if (this.selectedRole === 'seller' && this.getPrimaryState(updatedQuote) === 'inProgress') {
       console.log('Provider uploaded PDF, updating quote status to approved:', updatedQuote.id);
       
-      this.quoteService.updateQuoteStatus(updatedQuote.id!, 'approved').subscribe({
-        next: (approvedQuote) => {
+      this.tenderService.updateQuoteStatus(updatedQuote.id!, 'approved').subscribe({
+        next: (approvedQuote: Quote) => {
           // Update the quote again with the new status
           const approvedIndex = this.quotes.findIndex(q => q.id === approvedQuote.id);
           if (approvedIndex !== -1) {
@@ -611,7 +806,7 @@ export class QuoteListComponent implements OnInit {
           console.log('Quote status automatically updated to approved after PDF upload');
           this.notificationService.showSuccess(`Quote ${shortId} has been approved after PDF upload.`);
         },
-        error: (error) => {
+        error: (error: Error) => {
           console.error('Error updating quote status to approved:', error);
           this.notificationService.showError(`Error updating quote status: ${error.message || 'Unknown error'}`);
         }
@@ -633,8 +828,8 @@ export class QuoteListComponent implements OnInit {
 
   confirmStateUpdate() {
     if (this.quoteToUpdate && this.selectedState) {
-      this.quoteService.updateQuoteState(this.quoteToUpdate.id!, this.selectedState).subscribe({
-        next: (updatedQuote) => {
+      this.tenderService.updateQuoteState(this.quoteToUpdate.id!, this.selectedState).subscribe({
+        next: (updatedQuote: Quote) => {
           const index = this.quotes.findIndex(q => q.id === updatedQuote.id);
           if (index !== -1) {
             this.quotes[index] = updatedQuote;
@@ -643,7 +838,7 @@ export class QuoteListComponent implements OnInit {
           this.showStateUpdate = false;
           this.notificationService.showSuccess('Quote state updated successfully');
         },
-        error: (error) => {
+        error: (error: Error) => {
           console.error('Failed to update quote state:', error);
           this.notificationService.showError('Failed to update quote state');
         }
@@ -659,14 +854,14 @@ export class QuoteListComponent implements OnInit {
 
   deleteQuote() {
     if (this.quoteToDelete) {
-      this.quoteService.deleteQuote(this.quoteToDelete.id!).subscribe({
+      this.tenderService.deleteQuote(this.quoteToDelete.id!).subscribe({
         next: () => {
           this.quotes = this.quotes.filter(q => q.id !== this.quoteToDelete!.id);
           this.filterQuotesByStatus();
           this.showDeleteConfirm = false;
           this.notificationService.showSuccess('Quote deleted successfully');
         },
-        error: (error) => {
+        error: (error: Error) => {
           console.error('Failed to delete quote:', error);
           this.notificationService.showError('Failed to delete quote');
         }
@@ -683,7 +878,7 @@ export class QuoteListComponent implements OnInit {
 
   downloadAttachment(quote: Quote) {
     try {
-      this.quoteService.downloadAttachment(quote);
+      this.tenderService.downloadAttachment(quote);
       this.notificationService.showSuccess('Download started');
     } catch (error: any) {
       console.error('Error downloading attachment:', error);
@@ -707,8 +902,8 @@ export class QuoteListComponent implements OnInit {
 
     console.log('Accepting quote request:', quote.id);
     
-    this.quoteService.updateQuoteStatus(quote.id!, 'inProgress').subscribe({
-      next: (updatedQuote) => {
+    this.tenderService.updateQuoteStatus(quote.id!, 'inProgress').subscribe({
+      next: (updatedQuote: Quote) => {
         const index = this.quotes.findIndex(q => q.id === updatedQuote.id);
         if (index !== -1) {
           this.quotes[index] = updatedQuote;
@@ -717,7 +912,7 @@ export class QuoteListComponent implements OnInit {
         console.log('Quote request successfully accepted');
         this.notificationService.showSuccess(`Quote request ${shortId} has been accepted and is now in progress.`);
       },
-      error: (error) => {
+      error: (error: Error) => {
         console.error('Error accepting quote request:', error);
         this.notificationService.showError(`Error accepting quote request: ${error.message || 'Unknown error'}`);
       }
@@ -734,8 +929,8 @@ export class QuoteListComponent implements OnInit {
 
     console.log('Customer accepting quotation:', quote.id);
     
-    this.quoteService.updateQuoteStatus(quote.id!, 'accepted').subscribe({
-      next: (updatedQuote) => {
+    this.tenderService.updateQuoteStatus(quote.id!, 'accepted').subscribe({
+      next: (updatedQuote: Quote) => {
         const index = this.quotes.findIndex(q => q.id === updatedQuote.id);
         if (index !== -1) {
           this.quotes[index] = updatedQuote;
@@ -744,7 +939,7 @@ export class QuoteListComponent implements OnInit {
         console.log('Quotation successfully accepted by customer');
         this.notificationService.showSuccess(`Quotation ${shortId} has been accepted successfully.`);
       },
-      error: (error) => {
+      error: (error: Error) => {
         console.error('Error accepting quotation:', error);
         this.notificationService.showError(`Error accepting quotation: ${error.message || 'Unknown error'}`);
       }
@@ -752,72 +947,9 @@ export class QuoteListComponent implements OnInit {
   }
 
   // Date picker methods
-  addRequestedDate(quote: Quote) {
-    this.selectedDateQuote = quote;
-    this.datePickerType = 'requested';
-    this.selectedDate = '';
-    this.showDatePickerModal = true;
-  }
+  
 
-  addExpectedDate(quote: Quote) {
-    this.selectedDateQuote = quote;
-    this.datePickerType = 'expected';
-    this.selectedDate = '';
-    this.showDatePickerModal = true;
-  }
-
-  closeDatePickerModal() {
-    this.showDatePickerModal = false;
-    this.selectedDateQuote = null;
-    this.datePickerType = null;
-    this.selectedDate = '';
-  }
-
-  getTomorrowDate(): string {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  }
-
-  isDateValid(): boolean {
-    if (!this.selectedDate) return false;
-    const selectedDateObj = new Date(this.selectedDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return selectedDateObj > today;
-  }
-
-  confirmDateUpdate() {
-    if (!this.selectedDateQuote || !this.datePickerType || !this.selectedDate || !this.isDateValid()) {
-      return;
-    }
-
-    const shortId = this.extractShortId(this.selectedDateQuote.id);
-    const dateType = this.datePickerType;
-    
-    // Format date as DD-MM-YYYY as required by the API
-    const dateObj = new Date(this.selectedDate);
-    const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getFullYear()}`;
-    
-    console.log(`Setting ${dateType} completion date for quote:`, this.selectedDateQuote.id, 'Date:', formattedDate);
-    
-    this.quoteService.updateQuoteDate(this.selectedDateQuote.id!, formattedDate, dateType).subscribe({
-      next: (updatedQuote) => {
-        const index = this.quotes.findIndex(q => q.id === updatedQuote.id);
-        if (index !== -1) {
-          this.quotes[index] = updatedQuote;
-          this.filterQuotesByStatus();
-        }
-        console.log(`${dateType} completion date successfully updated`);
-        this.notificationService.showSuccess(`${dateType === 'requested' ? 'Requested' : 'Expected'} completion date for quote ${shortId} has been set successfully.`);
-        this.closeDatePickerModal();
-      },
-      error: (error) => {
-        console.error(`Error setting ${dateType} completion date:`, error);
-        this.notificationService.showError(`Error setting ${dateType} completion date: ${error.message || 'Unknown error'}`);
-      }
-    });
-  }
+  
 
   cancelQuote(quote: Quote) {
     const shortId = this.extractShortId(quote.id);
@@ -829,8 +961,8 @@ export class QuoteListComponent implements OnInit {
 
     console.log('Cancelling quote:', quote.id);
     
-    this.quoteService.updateQuoteStatus(quote.id!, 'cancelled').subscribe({
-      next: (updatedQuote) => {
+    this.tenderService.updateQuoteStatus(quote.id!, 'cancelled').subscribe({
+      next: (updatedQuote: Quote) => {
         const index = this.quotes.findIndex(q => q.id === updatedQuote.id);
         if (index !== -1) {
           this.quotes[index] = updatedQuote;
@@ -839,7 +971,7 @@ export class QuoteListComponent implements OnInit {
         console.log('Quote successfully cancelled');
         this.notificationService.showSuccess(`Quote ${shortId} has been cancelled successfully.`);
       },
-      error: (error) => {
+      error: (error: Error) => {
         console.error('Error cancelling quote:', error);
         this.notificationService.showError(`Error cancelling quote: ${error.message || 'Unknown error'}`);
       }
@@ -865,6 +997,43 @@ export class QuoteListComponent implements OnInit {
     }
     
     return 'unknown';
+  }
+
+  getQuoteItemState(quote: Quote): string {
+    let state = 'unknown';
+    
+    if (Array.isArray(quote.quoteItem) && quote.quoteItem.length > 0) {
+      // Scan all items and pick the first defined state
+      for (const item of quote.quoteItem) {
+        if (item && (item as any).state) {
+          state = (item as any).state as string;
+          break;
+        }
+      }
+    }
+    
+    // Apply mapping only for coordinator quotes
+    if (quote.category === 'coordinator') {
+      return this.mapCoordinatorStatusToGUI(state);
+    }
+    
+    return state;
+  }
+
+  /**
+   * Map coordinator quote status from backend (TMF) to frontend (GUI) display
+   * Only for coordinator quotes
+   */
+  mapCoordinatorStatusToGUI(backendStatus: string): string {
+    const mapping: { [key: string]: string } = {
+      'pending': 'draft',
+      'inProgress': 'pre-launched',
+      'approved': 'launched',
+      'accepted': 'closed',
+      'cancelled': 'cancelled',
+      'rejected': 'rejected'
+    };
+    return mapping[backendStatus] || backendStatus;
   }
 
   hasAttachment(quote: Quote): boolean {
@@ -920,8 +1089,7 @@ export class QuoteListComponent implements OnInit {
         return false;
       case 'addRequestedDate':
       case 'addExpectedDate':
-        // Date picker buttons should not be disabled
-        return false;
+        return true;
       default:
         return false;
     }
@@ -989,6 +1157,15 @@ export class QuoteListComponent implements OnInit {
         return 'status-cancelled';
       case 'accepted':
         return 'status-accepted';
+      // Coordinator quote states (mapped)
+      case 'draft':
+        return 'status-draft';
+      case 'pre-launched':
+        return 'status-pre-launched';
+      case 'launched':
+        return 'status-launched';
+      case 'closed':
+        return 'status-closed';
       default:
         return 'status-unknown';
     }
@@ -996,5 +1173,132 @@ export class QuoteListComponent implements OnInit {
 
   canUpdateState(state: QuoteStateType | undefined): boolean {
     return state !== 'cancelled' && state !== 'accepted';
+  }
+
+  // ========================================
+  // EXPAND/COLLAPSE RELATED QUOTES
+  // ========================================
+
+  /**
+   * Check if a coordinator quote is expandable
+   * (not in pending status, which displays as "draft")
+   */
+  isCoordinatorExpandable(quote: Quote): boolean {
+    if (quote.category !== 'coordinator') {
+      return false;
+    }
+    
+    const state = this.getPrimaryState(quote);
+    
+    // Expandable if NOT pending (backend state "pending" = GUI display "draft")
+    // All other states (inProgress/pre-launched, approved/launched, etc.) are expandable
+    return state !== 'pending';
+  }
+
+  /**
+   * Check if a quote row is expanded
+   */
+  isExpanded(quoteId: string | undefined): boolean {
+    return quoteId ? this.expandedQuoteIds.has(quoteId) : false;
+  }
+
+  /**
+   * Toggle expand/collapse for a coordinator quote
+   */
+  toggleExpand(quote: Quote): void {
+    if (!quote.id) return;
+
+    const isCurrentlyExpanded = this.expandedQuoteIds.has(quote.id);
+
+    if (isCurrentlyExpanded) {
+      // Collapse
+      console.log(`Collapsing quote ${this.extractShortId(quote.id)}`);
+      this.expandedQuoteIds.delete(quote.id);
+    } else {
+      // Expand - fetch related quotes if not already loaded
+      console.log(`Expanding quote ${this.extractShortId(quote.id)}, externalId: ${quote.externalId}`);
+      this.expandedQuoteIds.add(quote.id);
+      
+      if (!this.relatedQuotesMap.has(quote.id)) {
+        console.log('Fetching related quotes...');
+        this.loadRelatedQuotes(quote);
+      } else {
+        console.log(`Using cached ${this.relatedQuotesMap.get(quote.id)?.length} related quotes`);
+      }
+    }
+  }
+
+  /**
+   * Load related tendering quotes for a coordinator quote
+   */
+  private loadRelatedQuotes(coordinatorQuote: Quote): void {
+    if (!coordinatorQuote.id || !this.currentUserId) {
+      console.error('Cannot load related quotes: missing id or userId', {
+        id: coordinatorQuote.id,
+        userId: this.currentUserId
+      });
+      return;
+    }
+
+    // For coordinator quotes, use the quote's own ID as the externalId
+    // because tendering quotes are created with the coordinator quote ID as their externalId
+    const externalIdToUse = coordinatorQuote.externalId || coordinatorQuote.id;
+
+    console.log(`Loading related quotes for coordinator ${this.extractShortId(coordinatorQuote.id)}:`, {
+      userId: this.currentUserId,
+      role: 'Customer',
+      externalId: externalIdToUse,
+      coordinatorId: coordinatorQuote.id
+    });
+
+    this.loadingRelatedQuotes.add(coordinatorQuote.id);
+
+    // Fetch tendering quotes using the coordinator quote's ID as externalId
+    this.tenderService.getTenderingQuotesRaw(
+      this.currentUserId,
+      'Customer',
+      externalIdToUse
+    ).subscribe({
+      next: (relatedQuotes: Quote[]) => {
+        this.relatedQuotesMap.set(coordinatorQuote.id!, relatedQuotes);
+        this.loadingRelatedQuotes.delete(coordinatorQuote.id!);
+        console.log(`✅ Successfully loaded ${relatedQuotes.length} related quotes for coordinator ${this.extractShortId(coordinatorQuote.id)}`);
+        if (relatedQuotes.length > 0) {
+          console.log('Related quotes:', relatedQuotes.map(q => ({
+            id: this.extractShortId(q.id),
+            provider: this.getProviderName(q),
+            state: this.getQuoteItemState(q)
+          })));
+        }
+      },
+      error: (error: Error) => {
+        console.error('❌ Failed to load related quotes:', error);
+        this.loadingRelatedQuotes.delete(coordinatorQuote.id!);
+        this.notificationService.showError('Failed to load related quotes');
+      }
+    });
+  }
+
+  /**
+   * Get related quotes for a coordinator quote
+   */
+  getRelatedQuotes(quoteId: string | undefined): Quote[] {
+    if (!quoteId) return [];
+    return this.relatedQuotesMap.get(quoteId) || [];
+  }
+
+  /**
+   * Check if related quotes are loading
+   */
+  isLoadingRelatedQuotes(quoteId: string | undefined): boolean {
+    return quoteId ? this.loadingRelatedQuotes.has(quoteId) : false;
+  }
+
+  /**
+   * Get provider name from related party
+   */
+  getProviderName(quote: Quote): string {
+    const provider = quote.relatedParty?.find(party => party.role === 'Seller');
+    return provider?.name || provider?.id || 'Unknown Provider';
   }
 } 

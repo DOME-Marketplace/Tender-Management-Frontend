@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { QuoteService } from '../../../features/quotes/services/quote.service';
+import { TenderService } from '../../../core/services/tender.service';
 import { LoginService } from '../../../core/services/login.service';
 import { NotificationService } from '../../services/notification.service';
 import { Quote, Note } from '../../models/quote.model';
@@ -86,7 +86,7 @@ type QuoteNote = Note;
             placeholder="Type a message..."
             required
             [disabled]="isSending"
-            (keydown.enter)="$event.preventDefault(); sendMessage()"
+            (keydown.enter)="handleEnterKey($any($event))"
           />
 
           <!-- Action Buttons -->
@@ -126,7 +126,7 @@ export class ChatModalComponent implements OnInit, OnDestroy, OnChanges {
   private pollingInterval: any;
 
   constructor(
-    private quoteService: QuoteService,
+    private tenderService: TenderService,
     private loginService: LoginService,
     private notificationService: NotificationService
   ) {}
@@ -161,7 +161,7 @@ export class ChatModalComponent implements OnInit, OnDestroy, OnChanges {
     this.error = false;
 
     try {
-      const quote = await this.quoteService.getQuoteById(this.quoteId).toPromise();
+      const quote = await this.tenderService.getQuoteById(this.quoteId).toPromise();
       this.messages = Array.isArray(quote?.note) ? quote.note : [];
       this.scrollToBottom();
     } catch (err) {
@@ -189,7 +189,7 @@ export class ChatModalComponent implements OnInit, OnDestroy, OnChanges {
 
     try {
       console.log('Calling addNoteToQuote API...');
-      await this.quoteService.addNoteToQuote(this.quoteId, this.newMessage.trim(), this.currentUserId).toPromise();
+      await this.tenderService.addNoteToQuote(this.quoteId, this.newMessage.trim(), this.currentUserId).toPromise();
       console.log('Message sent successfully');
       this.newMessage = '';
       // Reload messages after sending
@@ -200,6 +200,11 @@ export class ChatModalComponent implements OnInit, OnDestroy, OnChanges {
     } finally {
       this.isSending = false;
     }
+  }
+
+  handleEnterKey(event: KeyboardEvent) {
+    event.preventDefault();
+    this.sendMessage();
   }
 
   isMyMessage(message: QuoteNote): boolean {

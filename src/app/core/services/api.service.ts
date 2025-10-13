@@ -23,8 +23,8 @@ export class ApiService {
     return this.http.put<T>(`${this.baseUrl}${path}`, body);
   }
 
-  protected patch<T>(path: string, body: any): Observable<T> {
-    return this.http.patch<T>(`${this.baseUrl}${path}`, body);
+  protected patch<T>(path: string, body: any, params: HttpParams = new HttpParams()): Observable<T> {
+    return this.http.patch<T>(`${this.baseUrl}${path}`, body, { params });
   }
 
   protected delete<T>(path: string): Observable<T> {

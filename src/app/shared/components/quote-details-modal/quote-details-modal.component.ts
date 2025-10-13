@@ -1,14 +1,13 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { QuoteService } from '../../../features/quotes/services/quote.service';
+import { TenderService } from '../../../core/services/tender.service';
 import { NotificationService } from '../../services/notification.service';
 import { Quote } from '../../models/quote.model';
-import { NotificationComponent } from '../notification/notification.component';
 
 @Component({
   selector: 'app-quote-details-modal',
   standalone: true,
-  imports: [CommonModule, NotificationComponent],
+  imports: [CommonModule],
   template: `
     <!-- Modal Backdrop -->
     <div 
@@ -88,7 +87,7 @@ export class QuoteDetailsModalComponent implements OnInit, OnChanges {
   error: string | null = null;
 
   constructor(
-    public quoteService: QuoteService,
+    public tenderService: TenderService,
     private notificationService: NotificationService
   ) {}
 
@@ -114,7 +113,7 @@ export class QuoteDetailsModalComponent implements OnInit, OnChanges {
     this.isLoading = true;
     this.error = null;
 
-    this.quoteService.getQuoteById(id).subscribe({
+    this.tenderService.getQuoteById(id).subscribe({
       next: (quote) => {
         this.quote = quote;
         this.isLoading = false;

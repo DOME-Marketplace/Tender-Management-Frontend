@@ -10,6 +10,10 @@ export interface Tender {
   provider?: string;      // Nome del provider (per tender figli)
   createdAt?: string;
   updatedAt?: string;
+  
+  // Completion dates from Quote
+  expectedQuoteCompletionDate?: string;
+  requestedQuoteCompletionDate?: string;
 }
 
 export interface TenderAttachment {

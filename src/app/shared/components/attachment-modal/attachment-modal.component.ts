@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { QuoteService } from '../../../features/quotes/services/quote.service';
+import { TenderService } from '../../../core/services/tender.service';
 import { NotificationService } from '../../services/notification.service';
 import { Quote } from '../../models/quote.model';
 
@@ -64,7 +64,7 @@ import { Quote } from '../../models/quote.model';
             #fileInput
             type="file" 
             accept=".pdf" 
-            (change)="onFileSelected($event)"
+            (change)="onFileSelected($any($event))"
             class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
           />
           <p class="text-xs text-gray-500 mt-1">Only PDF files are allowed</p>
@@ -105,7 +105,7 @@ export class AttachmentModalComponent implements OnInit, OnChanges {
   hasExistingAttachment = false;
 
   constructor(
-    private quoteService: QuoteService,
+    private tenderService: TenderService,
     private notificationService: NotificationService
   ) {}
 
@@ -129,13 +129,14 @@ export class AttachmentModalComponent implements OnInit, OnChanges {
       this.quote.quoteItem.some(qi => qi.attachment && qi.attachment.length > 0);
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
+  onFileSelected(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
     if (file) {
       if (file.type !== 'application/pdf') {
         this.notificationService.showError('Please select a valid PDF file.');
         this.selectedFile = null;
-        event.target.value = '';
+        target.value = '';
         return;
       }
       this.selectedFile = file;
@@ -152,7 +153,7 @@ export class AttachmentModalComponent implements OnInit, OnChanges {
     this.isUploading = true;
 
     try {
-      const updatedQuote = await this.quoteService.addAttachmentToQuote(
+      const updatedQuote = await this.tenderService.addAttachmentToQuote(
         this.quote.id, 
         this.selectedFile, 
         ''
