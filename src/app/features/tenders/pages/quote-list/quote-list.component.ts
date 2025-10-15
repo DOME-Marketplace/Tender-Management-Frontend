@@ -160,14 +160,14 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
               </span>
             </div>
             
-            <!-- Requested Date -->
+            <!-- Expected Fulfillment Start Date -->
             <div class="col-span-2 text-sm text-gray-600">
-              {{ quote.requestedQuoteCompletionDate | date:'dd/MM/yyyy' }}
+              {{ quote.expectedFulfillmentStartDate | date:'dd/MM/yyyy' }}
             </div>
             
-            <!-- Expected Date -->
+            <!-- Effective Completion Date -->
             <div class="col-span-3 text-sm text-gray-600">
-              {{ quote.expectedQuoteCompletionDate | date:'dd/MM/yyyy' }}
+              {{ quote.effectiveQuoteCompletionDate | date:'dd/MM/yyyy' }}
             </div>
             
             <!-- Actions -->
@@ -183,6 +183,26 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
                 {{ isExpanded(quote.id) ? 'Collapse' : 'Expand' }}
+              </button>
+
+              <!-- Test: Start Tender (for coordinator quotes in pre-launched status) -->
+              <button
+                *ngIf="quote.category === 'coordinator' && getPrimaryState(quote) === 'inProgress'"
+                (click)="simulateStartTender(quote)"
+                class="px-2 py-1 text-xs font-medium transition-colors rounded border text-orange-600 hover:text-orange-800 border-orange-200 hover:bg-orange-50"
+                title="[TEST] Start tender - updates status to 'launched'"
+              >
+                🚀 Start Tender
+              </button>
+
+              <!-- Test: Close Tender (for coordinator quotes in launched status) -->
+              <button
+                *ngIf="quote.category === 'coordinator' && getPrimaryState(quote) === 'approved'"
+                (click)="simulateCloseTender(quote)"
+                class="px-2 py-1 text-xs font-medium transition-colors rounded border text-purple-600 hover:text-purple-800 border-purple-200 hover:bg-purple-50"
+                title="[TEST] Close tender - updates status to 'closed'"
+              >
+                🏁 Close Tender
               </button>
 
               <!-- View Details -->
@@ -248,13 +268,13 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
               
               <!-- Accept/Cancel buttons or Finalized indicator -->
               <ng-container *ngIf="!isQuoteFinalized(quote)">
-                <!-- Accept (Provider only, when quote is pending) -->
+                <!-- Accept (Provider only, when tendering quote is pending) -->
                 <button
-                  *ngIf="selectedRole === 'seller' && getPrimaryState(quote) === 'pending'"
+                  *ngIf="selectedRole === 'seller' && quote.category === 'tender' && getPrimaryState(quote) === 'pending'"
                   [disabled]="isActionDisabled(quote, 'accept')"
-                  (click)="acceptQuote(quote)"
+                  (click)="acceptTenderingQuote(quote)"
                   [class]="getIconButtonClass(quote, 'accept', 'text-emerald-600 hover:text-emerald-700')"
-                  title="Accept quote request"
+                  title="Accept tender request"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -274,12 +294,13 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                   </svg>
                 </button>
                 
-                <!-- Cancel -->
+                <!-- Cancel (Provider only, when tendering quote is pending) -->
                 <button
+                  *ngIf="selectedRole === 'seller' && quote.category === 'tender' && getPrimaryState(quote) === 'pending'"
                   [disabled]="isActionDisabled(quote, 'cancel')"
-                  (click)="cancelQuote(quote)"
+                  (click)="cancelTenderingQuote(quote)"
                   [class]="getIconButtonClass(quote, 'cancel', 'text-red-500 hover:text-red-700')"
-                  title="Cancel quote"
+                  title="Cancel tender request"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -320,10 +341,8 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                 <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
                   <div class="grid grid-cols-12 gap-4 text-xs font-medium text-gray-600 uppercase">
                     <div class="col-span-3">Provider</div>
-                    <div class="col-span-2">Status</div>
-                    <div class="col-span-2">Requested Date</div>
-                    <div class="col-span-2">Expected Date</div>
-                    <div class="col-span-3">Actions</div>
+                    <div class="col-span-3">Status</div>
+                    <div class="col-span-6">Actions</div>
                   </div>
                 </div>
 
@@ -339,25 +358,15 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                     </div>
                     
                     <!-- Status -->
-                    <div class="col-span-2">
+                    <div class="col-span-3">
                       <span class="status-badge px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full"
                             [ngClass]="getStateClass(getQuoteItemState(relatedQuote))">
                         {{ getQuoteItemState(relatedQuote) }}
                       </span>
                     </div>
                     
-                    <!-- Requested Date -->
-                    <div class="col-span-2 text-gray-600 text-xs">
-                      {{ relatedQuote.requestedQuoteCompletionDate | date:'dd/MM/yyyy' }}
-                    </div>
-                    
-                    <!-- Expected Date -->
-                    <div class="col-span-2 text-gray-600 text-xs">
-                      {{ relatedQuote.expectedQuoteCompletionDate | date:'dd/MM/yyyy' }}
-                    </div>
-                    
                     <!-- Actions -->
-                    <div class="col-span-3 flex gap-1">
+                    <div class="col-span-6 flex gap-1">
                       <!-- View Details -->
                       <button
                         (click)="viewDetails(relatedQuote)"
@@ -643,8 +652,8 @@ export class QuoteListComponent implements OnInit {
       href: '',
       description: tender.tenderNote || '',
       quoteDate: tender.createdAt || new Date().toISOString(),
-      expectedQuoteCompletionDate: tender.expectedQuoteCompletionDate,
-      requestedQuoteCompletionDate: tender.requestedQuoteCompletionDate,
+      effectiveQuoteCompletionDate: tender.effectiveQuoteCompletionDate,
+      expectedFulfillmentStartDate: tender.expectedFulfillmentStartDate,
       state: this.mapTenderStateToQuoteState(tender.state),
       category: tender.category,
       externalId: tender.external_id,
@@ -730,12 +739,12 @@ export class QuoteListComponent implements OnInit {
       id: quote.id,
       category: quote.category === 'coordinator' ? 'coordinator' : 'tendering',
       state: this.mapQuoteStateToTenderState(quote.state),
-      responseDeadline: quote.requestedQuoteCompletionDate || quote.expectedQuoteCompletionDate || new Date().toISOString(),
+      responseDeadline: quote.expectedFulfillmentStartDate || quote.effectiveQuoteCompletionDate || new Date().toISOString(),
       tenderNote: quote.description || '',
       attachment: attachment,
       selectedProviders: quote.relatedParty?.filter(p => p.role === 'Seller').map(p => p.id) || [],
-      expectedQuoteCompletionDate: quote.expectedQuoteCompletionDate,
-      requestedQuoteCompletionDate: quote.requestedQuoteCompletionDate
+      effectiveQuoteCompletionDate: quote.effectiveQuoteCompletionDate,
+      expectedFulfillmentStartDate: quote.expectedFulfillmentStartDate
     };
 
     console.log('Navigating to edit tender with data:', tender);
@@ -892,15 +901,15 @@ export class QuoteListComponent implements OnInit {
     this.showAttachmentModal = true;
   }
 
-  acceptQuote(quote: Quote) {
+  acceptTenderingQuote(quote: Quote) {
     const shortId = this.extractShortId(quote.id);
-    const confirmAccept = confirm(`Are you sure you want to accept this request?`);
+    const confirmAccept = confirm(`Are you sure you want to accept this tender request?`);
     
     if (!confirmAccept) {
       return;
     }
 
-    console.log('Accepting quote request:', quote.id);
+    console.log('Accepting tendering quote:', quote.id);
     
     this.tenderService.updateQuoteStatus(quote.id!, 'inProgress').subscribe({
       next: (updatedQuote: Quote) => {
@@ -909,12 +918,93 @@ export class QuoteListComponent implements OnInit {
           this.quotes[index] = updatedQuote;
           this.filterQuotesByStatus();
         }
-        console.log('Quote request successfully accepted');
-        this.notificationService.showSuccess(`Quote request ${shortId} has been accepted and is now in progress.`);
+        console.log('Tendering quote successfully accepted');
+        this.notificationService.showSuccess(`Tender request ${shortId} has been accepted and is now in progress.`);
       },
       error: (error: Error) => {
-        console.error('Error accepting quote request:', error);
-        this.notificationService.showError(`Error accepting quote request: ${error.message || 'Unknown error'}`);
+        console.error('Error accepting tendering quote:', error);
+        this.notificationService.showError(`Error accepting tender request: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  cancelTenderingQuote(quote: Quote) {
+    const shortId = this.extractShortId(quote.id);
+    const confirmCancel = confirm(`Are you sure you want to cancel this tender request?\n\nThis action cannot be undone.`);
+    
+    if (!confirmCancel) {
+      return;
+    }
+
+    console.log('Cancelling tendering quote:', quote.id);
+    
+    this.tenderService.updateQuoteStatus(quote.id!, 'cancelled').subscribe({
+      next: (updatedQuote: Quote) => {
+        const index = this.quotes.findIndex(q => q.id === updatedQuote.id);
+        if (index !== -1) {
+          this.quotes[index] = updatedQuote;
+          this.filterQuotesByStatus();
+        }
+        console.log('Tendering quote successfully cancelled');
+        this.notificationService.showSuccess(`Tender request ${shortId} has been cancelled.`);
+      },
+      error: (error: Error) => {
+        console.error('Error cancelling tendering quote:', error);
+        this.notificationService.showError(`Error cancelling tender request: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  simulateStartTender(quote: Quote) {
+    const shortId = this.extractShortId(quote.id);
+    const confirmStart = confirm(`[TEST] Simulate starting the tender?\n\nThis will update the status from "pre-launched" to "launched".`);
+    
+    if (!confirmStart) {
+      return;
+    }
+
+    console.log('[TEST] Starting tender (updating to approved):', quote.id);
+    
+    this.tenderService.updateQuoteStatus(quote.id!, 'approved').subscribe({
+      next: (updatedQuote: Quote) => {
+        const index = this.quotes.findIndex(q => q.id === updatedQuote.id);
+        if (index !== -1) {
+          this.quotes[index] = updatedQuote;
+          this.filterQuotesByStatus();
+        }
+        console.log('[TEST] Tender successfully started (status updated to approved/launched)');
+        this.notificationService.showSuccess(`Tender ${shortId} has been started successfully (status: launched).`);
+      },
+      error: (error: Error) => {
+        console.error('[TEST] Error starting tender:', error);
+        this.notificationService.showError(`Error starting tender: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  simulateCloseTender(quote: Quote) {
+    const shortId = this.extractShortId(quote.id);
+    const confirmClose = confirm(`[TEST] Simulate closing the tender?\n\nThis will update the status from "launched" to "closed".`);
+    
+    if (!confirmClose) {
+      return;
+    }
+
+    console.log('[TEST] Closing tender (updating to accepted):', quote.id);
+    
+    this.tenderService.updateQuoteStatus(quote.id!, 'accepted').subscribe({
+      next: (updatedQuote: Quote) => {
+        const index = this.quotes.findIndex(q => q.id === updatedQuote.id);
+        if (index !== -1) {
+          this.quotes[index] = updatedQuote;
+          this.filterQuotesByStatus();
+        }
+        console.log('[TEST] Tender successfully closed (status updated to accepted/closed)');
+        this.notificationService.showSuccess(`Tender ${shortId} has been closed successfully (status: closed).`);
+      },
+      error: (error: Error) => {
+        console.error('[TEST] Error closing tender:', error);
+        this.notificationService.showError(`Error closing tender: ${error.message || 'Unknown error'}`);
       }
     });
   }

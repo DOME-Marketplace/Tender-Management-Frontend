@@ -14,6 +14,8 @@ export interface Tender {
   // Completion dates from Quote
   expectedQuoteCompletionDate?: string;
   requestedQuoteCompletionDate?: string;
+  effectiveQuoteCompletionDate?: string;
+  expectedFulfillmentStartDate?: string;
 }
 
 export interface TenderAttachment {

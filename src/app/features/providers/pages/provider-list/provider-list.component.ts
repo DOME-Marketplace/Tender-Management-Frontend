@@ -2,6 +2,8 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { ProviderService, Provider } from '../../../../core/services/provider.service';
 import { NotificationComponent } from '../../../../shared/components/notification/notification.component';
 import { TenderService } from '../../../../core/services/tender.service';
@@ -199,7 +201,7 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
           <!-- Expected Completion Date -->
           <div class="mb-6">
             <label for="expectedDate" class="block text-sm font-medium text-gray-700 mb-2">
-              Expected Quote Completion Date *
+              Effective Quote Completion Date *
             </label>
             <div class="flex items-center space-x-3">
               <input 
@@ -222,7 +224,7 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
           <!-- Requested Completion Date -->
           <div class="mb-6">
             <label for="requestedDate" class="block text-sm font-medium text-gray-700 mb-2">
-              Requested Quote Completion Date *
+              Expected Fulfillment Start Date *
             </label>
             <div class="flex items-center space-x-3">
               <input 
@@ -324,11 +326,11 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
             <h4 class="text-sm font-medium text-green-900 mb-2">✓ Dates Set</h4>
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span class="text-green-700">Expected:</span>
+                <span class="text-green-700">Effective:</span>
                 <span class="ml-2 font-medium text-green-900">{{ formatDateForDisplay(expectedCompletionDate) }}</span>
               </div>
               <div>
-                <span class="text-green-700">Requested:</span>
+                <span class="text-green-700">Expected Fulfillment:</span>
                 <span class="ml-2 font-medium text-green-900">{{ formatDateForDisplay(requestedCompletionDate) }}</span>
               </div>
             </div>
@@ -563,7 +565,7 @@ export class ProviderListComponent implements OnInit {
     this.selectedProviders = new Set(tender.selectedProviders);
     
     // Extract dates directly from the tender object
-    console.log('Extracting dates from tender - Expected:', tender.expectedQuoteCompletionDate, 'Requested:', tender.requestedQuoteCompletionDate);
+    console.log('Extracting dates from tender - Effective:', tender.effectiveQuoteCompletionDate, 'Expected Fulfillment:', tender.expectedFulfillmentStartDate);
     this.extractDatesFromTender(tender);
     
     // Set to Step 2 (dates)
@@ -602,21 +604,21 @@ export class ProviderListComponent implements OnInit {
   extractDatesFromTender(tender: Tender) {
     console.log('Extracting dates from tender:', tender);
     
-    // Extract and convert expected completion date
-    if (tender.expectedQuoteCompletionDate) {
-      this.expectedCompletionDate = this.convertDateFromAPI(tender.expectedQuoteCompletionDate);
+    // Extract and convert effective completion date
+    if (tender.effectiveQuoteCompletionDate) {
+      this.expectedCompletionDate = this.convertDateFromAPI(tender.effectiveQuoteCompletionDate);
       this.expectedDateSet = !!this.expectedCompletionDate;
-      console.log('Expected date extracted:', this.expectedCompletionDate, 'Set:', this.expectedDateSet);
+      console.log('Effective date extracted:', this.expectedCompletionDate, 'Set:', this.expectedDateSet);
     } else {
       this.expectedCompletionDate = '';
       this.expectedDateSet = false;
     }
     
-    // Extract and convert requested completion date
-    if (tender.requestedQuoteCompletionDate) {
-      this.requestedCompletionDate = this.convertDateFromAPI(tender.requestedQuoteCompletionDate);
+    // Extract and convert expected fulfillment start date
+    if (tender.expectedFulfillmentStartDate) {
+      this.requestedCompletionDate = this.convertDateFromAPI(tender.expectedFulfillmentStartDate);
       this.requestedDateSet = !!this.requestedCompletionDate;
-      console.log('Requested date extracted:', this.requestedCompletionDate, 'Set:', this.requestedDateSet);
+      console.log('Expected fulfillment date extracted:', this.requestedCompletionDate, 'Set:', this.requestedDateSet);
     } else {
       this.requestedCompletionDate = '';
       this.requestedDateSet = false;
@@ -827,16 +829,16 @@ export class ProviderListComponent implements OnInit {
     this.tenderLoading = true;
     const formattedDate = this.formatDateForAPI(this.expectedCompletionDate);
     
-    this.tenderService.updateTenderDate(this.createdQuoteId, formattedDate, 'expected').subscribe({
+    this.tenderService.updateTenderDate(this.createdQuoteId, formattedDate, 'effective').subscribe({
       next: (updatedTender) => {
-        console.log('Expected date updated:', updatedTender);
+        console.log('Effective completion date updated:', updatedTender);
         this.expectedDateSet = true;
-        this.notificationService.showSuccess('Expected completion date set successfully!');
+        this.notificationService.showSuccess('Effective completion date set successfully!');
         this.tenderLoading = false;
       },
       error: (error) => {
-        console.error('Error setting expected date:', error);
-        this.notificationService.showError('Failed to set expected date: ' + (error.message || 'Unknown error'));
+        console.error('Error setting effective date:', error);
+        this.notificationService.showError('Failed to set effective date: ' + (error.message || 'Unknown error'));
         this.tenderLoading = false;
       }
     });
@@ -854,16 +856,16 @@ export class ProviderListComponent implements OnInit {
     this.tenderLoading = true;
     const formattedDate = this.formatDateForAPI(this.requestedCompletionDate);
     
-    this.tenderService.updateTenderDate(this.createdQuoteId, formattedDate, 'requested').subscribe({
+    this.tenderService.updateTenderDate(this.createdQuoteId, formattedDate, 'expectedFulfillment').subscribe({
       next: (updatedTender) => {
-        console.log('Requested date updated:', updatedTender);
+        console.log('Expected fulfillment start date updated:', updatedTender);
         this.requestedDateSet = true;
-        this.notificationService.showSuccess('Requested completion date set successfully!');
+        this.notificationService.showSuccess('Expected fulfillment start date set successfully!');
         this.tenderLoading = false;
       },
       error: (error) => {
-        console.error('Error setting requested date:', error);
-        this.notificationService.showError('Failed to set requested date: ' + (error.message || 'Unknown error'));
+        console.error('Error setting expected fulfillment date:', error);
+        this.notificationService.showError('Failed to set expected fulfillment date: ' + (error.message || 'Unknown error'));
         this.tenderLoading = false;
       }
     });
@@ -1176,14 +1178,62 @@ export class ProviderListComponent implements OnInit {
 
     this.tenderLoading = true;
 
-    // Update coordinator quote status to "inProgress" (which maps to "pre-launched" in GUI)
-    this.tenderService.updateQuoteStatus(this.createdQuoteId, 'inProgress').subscribe({
+    // Step 1: Get the coordinator quote to extract the dates
+    this.tenderService.getQuoteById(this.createdQuoteId).pipe(
+      switchMap(coordinatorQuote => {
+        console.log('Coordinator quote retrieved:', coordinatorQuote);
+        
+        // Extract dates from coordinator quote
+        const effectiveDate = coordinatorQuote.effectiveQuoteCompletionDate;
+        const expectedFulfillmentDate = coordinatorQuote.expectedFulfillmentStartDate;
+        
+        if (!effectiveDate || !expectedFulfillmentDate) {
+          throw new Error('Coordinator quote is missing date information');
+        }
+
+        // Format dates for API (DD-MM-YYYY format)
+        const formattedEffectiveDate = this.formatDateForAPI(this.expectedCompletionDate);
+        const formattedExpectedFulfillmentDate = this.formatDateForAPI(this.requestedCompletionDate);
+        
+        console.log(`Copying dates to ${this.invitedProviders.length} provider quotes:`, {
+          effective: formattedEffectiveDate,
+          expectedFulfillment: formattedExpectedFulfillmentDate
+        });
+
+        // Step 2: Create array of date update observables for all invited provider quotes
+        const dateUpdateObservables = this.invitedProviders.flatMap(invitedProvider => {
+          const quoteId = invitedProvider.quoteId;
+          console.log(`Updating dates for provider quote ${quoteId.slice(-8)}`);
+          
+          return [
+            // Update effective date
+            this.tenderService.updateQuoteDate(quoteId, formattedEffectiveDate, 'effective'),
+            // Update expected fulfillment date
+            this.tenderService.updateQuoteDate(quoteId, formattedExpectedFulfillmentDate, 'expectedFulfillment')
+          ];
+        });
+
+        // If no providers to update, return empty observable
+        if (dateUpdateObservables.length === 0) {
+          return of([]);
+        }
+
+        // Execute all date updates in parallel
+        return forkJoin(dateUpdateObservables);
+      }),
+      switchMap(dateUpdateResults => {
+        console.log(`Successfully updated dates for ${dateUpdateResults.length / 2} provider quotes`);
+        
+        // Step 3: Update coordinator quote status to "inProgress" (which maps to "pre-launched" in GUI)
+        return this.tenderService.updateQuoteStatus(this.createdQuoteId!, 'inProgress');
+      })
+    ).subscribe({
       next: (updatedQuote) => {
         console.log('Coordinator quote status updated to inProgress:', updatedQuote);
         
         // TODO: Implement actual notification system to send emails/notifications to providers
         // For now, just show a success message
-        this.notificationService.showSuccess('Notification has been sent to the providers');
+        this.notificationService.showSuccess('Dates copied to all provider quotes and notifications sent to providers');
         
         this.tenderLoading = false;
         this.closeTenderModal();
@@ -1192,7 +1242,7 @@ export class ProviderListComponent implements OnInit {
         this.router.navigate(['/tenders']);
       },
       error: (error) => {
-        console.error('Error updating coordinator quote status:', error);
+        console.error('Error finalizing tender:', error);
         this.notificationService.showError('Failed to finalize tender: ' + (error.message || 'Unknown error'));
         this.tenderLoading = false;
       }

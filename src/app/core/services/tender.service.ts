@@ -346,7 +346,7 @@ export class TenderService extends ApiService {
    * Update tender date
    * PATCH /quoteManagement/updateQuoteDate/{id}?date={date}&dateType={dateType}
    */
-  updateTenderDate(id: string, date: string, dateType: 'requested' | 'expected'): Observable<Tender> {
+  updateTenderDate(id: string, date: string, dateType: 'expectedFulfillment' | 'effective'): Observable<Tender> {
     const encodedId = encodeURIComponent(id);
     let params = new HttpParams()
       .set('date', date)
@@ -463,7 +463,7 @@ export class TenderService extends ApiService {
    * Update quote date (returns raw Quote object)
    * PATCH /quoteManagement/updateQuoteDate/{id}?date={date}&dateType={dateType}
    */
-  updateQuoteDate(id: string, date: string, dateType: 'expected' | 'requested'): Observable<Quote> {
+  updateQuoteDate(id: string, date: string, dateType: 'effective' | 'expectedFulfillment'): Observable<Quote> {
     const encodedId = encodeURIComponent(id);
     let params = new HttpParams()
       .set('date', date)
@@ -493,8 +493,8 @@ export class TenderService extends ApiService {
    */
   private mapQuoteToTender(quote: Quote): Tender {
     // Extract response deadline from quote
-    const responseDeadline = quote.requestedQuoteCompletionDate || 
-                            quote.expectedQuoteCompletionDate || 
+    const responseDeadline = quote.expectedFulfillmentStartDate || 
+                            quote.effectiveQuoteCompletionDate || 
                             new Date().toISOString();
 
     // Extract tender title from quote.description (this is where the title is saved)
@@ -555,8 +555,8 @@ export class TenderService extends ApiService {
       provider,
       createdAt: quote.quoteDate,
       updatedAt: quote.quoteDate,
-      expectedQuoteCompletionDate: quote.expectedQuoteCompletionDate,
-      requestedQuoteCompletionDate: quote.requestedQuoteCompletionDate
+      effectiveQuoteCompletionDate: quote.effectiveQuoteCompletionDate,
+      expectedFulfillmentStartDate: quote.expectedFulfillmentStartDate
     };
   }
 

@@ -420,7 +420,7 @@ export type QuoteStateType = 'rejected' | 'pending' | 'inProgress' | 'cancelled'
 export type ProductStatusType = 'created' | 'pendingActive' | 'cancelled' | 'active' | 'pendingTerminate' | 'terminated' | 'suspended' | 'aborted';
 
 // Create types for easier use
-export interface Quote_Create extends Omit<Quote, 'id' | 'href' | 'quoteDate' | 'state' | 'effectiveQuoteCompletionDate' | 'quoteTotalPrice' | 'expectedQuoteCompletionDate' | 'validFor'> {
+export interface Quote_Create extends Omit<Quote, 'id' | 'href' | 'quoteDate' | 'state' | 'effectiveQuoteCompletionDate' | 'quoteTotalPrice' | 'expectedQuoteCompletionDate' | 'requestedQuoteCompletionDate' | 'expectedFulfillmentStartDate' | 'validFor'> {
   quoteItem: QuoteItem[];
 }
 
