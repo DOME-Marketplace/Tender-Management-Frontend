@@ -197,6 +197,29 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
             <label class="block text-sm font-medium text-gray-700 mb-2">Tender Title</label>
             <p class="text-gray-900 font-medium">{{ tenderTitle }}</p>
           </div>
+          
+          <!-- Requested Completion Date -->
+          <div class="mb-6">
+            <label for="requestedDate" class="block text-sm font-medium text-gray-700 mb-2">
+              Expected Fulfillment Start Date *
+            </label>
+            <div class="flex items-center space-x-3">
+              <input 
+                type="date" 
+                id="requestedDate"
+                [(ngModel)]="requestedCompletionDate"
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <button 
+                (click)="setRequestedDate()" 
+                [disabled]="!requestedCompletionDate || tenderLoading"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium min-w-[80px]"
+              >
+                {{ requestedDateSet ? '✓ Set' : 'Set' }}
+              </button>
+            </div>
+            <p class="mt-1 text-xs text-gray-500">Format: DD/MM/YYYY</p>
+          </div>
 
           <!-- Expected Completion Date -->
           <div class="mb-6">
@@ -216,29 +239,6 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium min-w-[80px]"
               >
                 {{ expectedDateSet ? '✓ Set' : 'Set' }}
-              </button>
-            </div>
-            <p class="mt-1 text-xs text-gray-500">Format: DD/MM/YYYY</p>
-          </div>
-
-          <!-- Requested Completion Date -->
-          <div class="mb-6">
-            <label for="requestedDate" class="block text-sm font-medium text-gray-700 mb-2">
-              Expected Fulfillment Start Date *
-            </label>
-            <div class="flex items-center space-x-3">
-              <input 
-                type="date" 
-                id="requestedDate"
-                [(ngModel)]="requestedCompletionDate"
-                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-              <button 
-                (click)="setRequestedDate()" 
-                [disabled]="!requestedCompletionDate || tenderLoading"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium min-w-[80px]"
-              >
-                {{ requestedDateSet ? '✓ Set' : 'Set' }}
               </button>
             </div>
             <p class="mt-1 text-xs text-gray-500">Format: DD/MM/YYYY</p>
@@ -458,7 +458,7 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
                 [title]="invitedProviders.length === 0 ? 'Please invite at least one provider first' : ''"
                 class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed relative group"
               >
-                Complete Tender
+                Submit Tender
                 <span 
                   *ngIf="invitedProviders.length === 0" 
                   class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
