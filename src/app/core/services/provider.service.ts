@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SearchOrganizationsFilters } from '../../shared/models/search-organizations-filters.model';
 
 export interface Provider {
   id?: string;
@@ -88,6 +89,23 @@ export class ProviderService {
       }),
       catchError((error) => {
         console.warn('Providers for tender API failed:', error);
+        return of([]);
+      })
+    );
+  }
+
+  getProvidersForTenderNew(filters: SearchOrganizationsFilters): Observable<Provider[]> {
+
+    const url = '/org-api/searchOrganizations';
+
+    return this.http.post<any>(url, filters).pipe(
+      map((response) => {
+        if (Array.isArray(response)) return response as Provider[];
+        if (response?.data && Array.isArray(response.data)) return response.data as Provider[];
+        return [];
+      }),
+      catchError((error) => {
+        console.warn('Providers for tender (new) API failed:', error);
         return of([]);
       })
     );
