@@ -401,28 +401,33 @@ import { ReactiveFormsModule } from '@angular/forms';
 
     <!-- Left column -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Countries</label>
-      <select multiple [formControl]="countriesCtrl"
-              class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
-                     focus:border-blue-500 focus:ring focus:ring-blue-200">
-        <option value="ES">Spain</option>
-        <option value="IT">Italy</option>
-        <option value="FR">France</option>
-        <option value="GR">Greece</option>
-        <option value="DE">Germany</option>
-      </select>
-    </div>
+  <label class="block text-sm font-medium text-gray-700 mb-2">Countries</label>
+  <select multiple [formControl]="countriesCtrl"
+          class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+                 focus:border-blue-500 focus:ring focus:ring-blue-200">
+    <option *ngFor="let c of countriesOptions" [value]="c">{{ c }}</option>
+  </select>
+</div>
 
-    <!-- Right column -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Categories</label>
-      <select multiple [formControl]="categoriesCtrl" 
-              class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
-                     focus:border-blue-500 focus:ring focus:ring-blue-200">
-        <option value="ficodes test catalogue">Ficodes Test Catalogue</option>
-        <option value="catalogue 1">Catalogue 1</option>
-      </select>
-    </div>
+<!-- Categories -->
+<div>
+  <label class="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+  <select multiple [formControl]="categoriesCtrl"
+          class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+                 focus:border-blue-500 focus:ring focus:ring-blue-200">
+    <option *ngFor="let cat of categoriesOptions" [value]="cat">{{ cat }}</option>
+  </select>
+</div>
+
+<!-- Compliance Levels (new) -->
+<div>
+  <label class="block text-sm font-medium text-gray-700 mb-2">Compliance Levels</label>
+  <select multiple [formControl]="complianceLevelsCtrl"
+          class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+                 focus:border-blue-500 focus:ring focus:ring-blue-200">
+    <option *ngFor="let cl of complianceLevelsOptions" [value]="cl">{{ cl }}</option>
+  </select>
+</div>
 
     <!-- Clear button -->
     <div class="md:col-span-2 flex justify-start">
@@ -543,7 +548,7 @@ import { ReactiveFormsModule } from '@angular/forms';
                   Please select at least one provider
                 </span>
               </button>
-              <!--55555555555555555555555555555555555555-->
+              
               <button 
                 (click)="finalizeTender()"
                 [disabled]="invitedProviders.length === 0 || tenderLoading"
@@ -580,7 +585,12 @@ export class ProviderListComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
 
+  countriesOptions: string[] = [];
+  categoriesOptions: string[] = [];
+  complianceLevelsOptions: string[] = [];
+  
 
+  _safeInvitedList: Provider[] = [];
   providers: Provider[] = [];
   selectedProvider: Provider | null = null;
   loading = false;
@@ -628,15 +638,17 @@ export class ProviderListComponent implements OnInit {
     categories: [],
     countries: []
   };
-  console=console;
+  console = console;
   ngOnInit() {
+    this.loadFilterOptions();
     this.loadProviders();
+    
 
     // Check if there's a tender to edit from navigation state
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.extras?.state?.['tender']) {
       const tender = navigation.extras.state['tender'] as Tender;
-    
+
       this.loadTenderForEdit(tender);
     } else {
       // Check history state (for page refresh)
@@ -647,7 +659,7 @@ export class ProviderListComponent implements OnInit {
       }
     }
   }
- 
+
   emitFilters(): void {
     const newFilters: SearchOrganizationsFilters = {
       countries: this.countriesCtrl.value ?? [],
@@ -674,7 +686,8 @@ export class ProviderListComponent implements OnInit {
     this.emitFilters();
   }
   loadTenderForEdit(tender: Tender) {
-    console.log('Loading tender for edit:', tender);
+
+    
 
     this.editingTenderId = tender.id || null;
     this.createdQuoteId = tender.id || null;
@@ -691,7 +704,7 @@ export class ProviderListComponent implements OnInit {
     }
 
     this.selectedProviders = new Set(tender.selectedProviders);
-   
+
 
     // Extract dates directly from the tender object
     console.log('Extracting dates from tender - Effective:', tender.effectiveQuoteCompletionDate, 'Expected Fulfillment:', tender.expectedFulfillmentStartDate);
@@ -762,7 +775,7 @@ export class ProviderListComponent implements OnInit {
     }
   }
 
-  //1111111111111111111111111111111
+
   loadProviders() {
     this.loading = true;
     this.error = null;
@@ -1071,7 +1084,7 @@ export class ProviderListComponent implements OnInit {
    * Load already invited providers by fetching tendering quotes with the coordinator quote's externalId
    */
   loadInvitedProviders() {
-   
+
     if (!this.createdQuoteId) {
       console.log('No coordinator quote ID, skipping invited providers load');
       return;
@@ -1149,68 +1162,67 @@ export class ProviderListComponent implements OnInit {
   /**
    * Get available providers (excluding already invited ones)
    */
- private _safeInvitedList:  Provider[] = [];
- availableProviders: Provider[] = [];
 
- updateAvailableProviders(): void {
-  this.availableProviders = this.getAvailableProviders();
-}
+  availableProviders: Provider[] = [];
 
-  // 🔹 Updated function — keeps invited list safe and returns only available providers
-getAvailableProviders(): Provider[] {
-  // Simple and clean — everything is handled by the helper
-  return this.rebuildSelectionAndAvailable();
-}
-
-toggleProviderSelection(providerId: string) {
-  // find in local safe list (which stores { provider, quoteId })
-  const idx = this._safeInvitedList.findIndex(x => x?.id === providerId);
-
-  if (idx >= 0) {
-    // UNCHECK → remove from local safe list
-    this._safeInvitedList.splice(idx, 1);
-  } else {
-    // CHECK → add to local safe list
-    const p = this.tenderProviders.find(tp => tp.id === providerId);
-    if (p) {
-      debugger;
-      this._safeInvitedList.push(p);
-    }
+  updateAvailableProviders(): void {
+    this.availableProviders = this.getAvailableProviders();
   }
 
-  // Re-derive selectedProviders + available list in one place
-  this.rebuildSelectionAndAvailable();
-}
+  // 🔹 Updated function — keeps invited list safe and returns only available providers
+  getAvailableProviders(): Provider[] {
+    // Simple and clean — everything is handled by the helper
+    return this.rebuildSelectionAndAvailable();
+  }
 
-private rebuildSelectionAndAvailable(): Provider[] {
-  
-  // 1) selectedProviders = IDs from local safe list
-  this.selectedProviders = new Set(
-    this._safeInvitedList
-      .map(x => x?.id)
-      .filter((id): id is string => !!id)
-  );
- this.console.log(this.invitedProviders,"55555")
- debugger;
+  toggleProviderSelection(providerId: string) {
+    // find in local safe list (which stores { provider, quoteId })
+    const idx = this._safeInvitedList.findIndex(x => x?.id === providerId);
 
-  // 2) all IDs that must be excluded from availability (server invited + locally selected)
-  const excludeIds = new Set<string>([
-    ...this.invitedProviders
-      .map(ip => ip?.provider?.id)
-      .filter((id): id is string => !!id),
-    ...Array.from(this.selectedProviders),
-  ]);
+    if (idx >= 0) {
+      // UNCHECK → remove from local safe list
+      this._safeInvitedList.splice(idx, 1);
+    } else {
+      // CHECK → add to local safe list
+      const p = this.tenderProviders.find(tp => tp.id === providerId);
+      if (p) {
 
-  // 3) compute available list
-  const available = this.tenderProviders
-    .filter(p => !!p?.id && !excludeIds.has(p.id!))
-    .map(p => ({ ...p } as Provider));
+        this._safeInvitedList.push(p);
+      }
+    }
 
-  // keep a cached copy if you want to bind directly in template
-  this.availableProviders = available;
+    // Re-derive selectedProviders + available list in one place
+    this.rebuildSelectionAndAvailable();
+  }
 
-  return available;
-}
+  private rebuildSelectionAndAvailable(): Provider[] {
+
+    // 1) selectedProviders = IDs from local safe list
+    this.selectedProviders = new Set(
+      this._safeInvitedList
+        .map(x => x?.id)
+        .filter((id): id is string => !!id)
+    );
+
+
+    // 2) all IDs that must be excluded from availability (server invited + locally selected)
+    const excludeIds = new Set<string>([
+      ...this.invitedProviders
+        .map(ip => ip?.provider?.id)
+        .filter((id): id is string => !!id),
+      ...Array.from(this.selectedProviders),
+    ]);
+
+    // 3) compute available list
+    const available = this.tenderProviders
+      .filter(p => !!p?.id && !excludeIds.has(p.id!))
+      .map(p => ({ ...p } as Provider));
+
+    // keep a cached copy if you want to bind directly in template
+    this.availableProviders = available;
+
+    return available;
+  }
 
   /**
    * Step 3: Save providers list by creating tendering quotes for selected providers
@@ -1233,7 +1245,10 @@ private rebuildSelectionAndAvailable(): Provider[] {
     }
 
     this.tenderLoading = true;
+
     const providerIds = Array.from(this.selectedProviders);
+    debugger;
+
     const customerMessage = this.tenderTitle; // Use tender title as customer message
 
     console.log('Creating tendering quotes for providers:', providerIds);
@@ -1242,7 +1257,8 @@ private rebuildSelectionAndAvailable(): Provider[] {
 
     // Create tendering quotes one by one to capture individual quote IDs
     const requests = providerIds.map(providerId => {
-      const provider = this.tenderProviders.find(p => p.id === providerId);
+      const provider = this._safeInvitedList.find(p => p.id === providerId);
+
       return this.tenderService.createTenderingQuote(
         userId,
         providerId,
@@ -1623,4 +1639,18 @@ private rebuildSelectionAndAvailable(): Provider[] {
       this.notificationService.showError('Failed to process tender creation');
     }
   }
+
+  private loadFilterOptions(): void {
+    this.providerService.getFilterOptions().subscribe({
+      next: ({ categories, countries, complianceLevels }) => {
+        this.categoriesOptions = categories ?? [];
+        this.countriesOptions = countries ?? [];
+        this.complianceLevelsOptions = complianceLevels ?? [];
+      },
+      error: (err) => {
+        console.warn('Failed to load filter options', err);
+      }
+    });
+  }
+
 }

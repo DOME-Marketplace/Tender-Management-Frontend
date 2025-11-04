@@ -3,6 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SearchOrganizationsFilters } from '../../shared/models/search-organizations-filters.model';
+import { FilterOptions} from '../../shared/models/filter-options.model';
+import { forkJoin } from 'rxjs';
 
 export interface Provider {
   id?: string;
@@ -110,6 +112,39 @@ export class ProviderService {
       })
     );
   }
+
+  // ADD inside ProviderService class
+getFilterOptions(): Observable<FilterOptions> {
+  const categories$ = this.http.get<any>('/org-api/categories').pipe(
+    map(res => (Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [])),
+    catchError(err => {
+      console.warn('Categories API failed:', err);
+      return of<string[]>([]);
+    })
+  );
+
+  const countries$ = this.http.get<any>('/org-api/countries').pipe(
+    map(res => (Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [])),
+    catchError(err => {
+      console.warn('Countries API failed:', err);
+      return of<string[]>([]);
+    })
+  );
+
+  const complianceLevels$ = this.http.get<any>('/org-api/complianceLevels').pipe(
+    map(res => (Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [])),
+    catchError(err => {
+      console.warn('ComplianceLevels API failed:', err);
+      return of<string[]>([]);
+    })
+  );
+
+  return forkJoin({
+    categories: categories$,
+    countries: countries$,
+    complianceLevels: complianceLevels$,
+  });
+}
 
   // TODO: Replace with real endpoint for saving tender draft when available
   saveTenderDraft(draft: {
