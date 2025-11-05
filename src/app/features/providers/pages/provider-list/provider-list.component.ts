@@ -10,7 +10,7 @@ import { TenderService } from '../../../../core/services/tender.service';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../../../shared/models/tender.model';
-import { SearchOrganizationsFilters,countryName } from '../../../../shared/models/search-organizations-filters.model';
+import { SearchOrganizationsFilters,countryName,complianceLevelsName} from '../../../../shared/models/search-organizations-filters.model';
 import { FormControl } from '@angular/forms';
 import { ReactiveFormsModule } from '@angular/forms';
 
@@ -147,7 +147,7 @@ import { ReactiveFormsModule } from '@angular/forms';
     </div>
 
     <!-- Tender Creation Modal -->
-    <div *ngIf="showTenderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
+    <div *ngIf="showTenderModal || true" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
       <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white" (click)="$event.stopPropagation()">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-bold text-gray-900">{{ editingTenderId ? 'Edit Tender' : 'Create New Tender' }}</h3>
@@ -317,7 +317,7 @@ import { ReactiveFormsModule } from '@angular/forms';
         </div>
 
         <!-- Step 3: Provider Selection -->
-        <div *ngIf="tenderCreationStep === 3 ">
+        <div *ngIf="tenderCreationStep === 3 || true ">
           <!-- Display Title (Read-only) -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <label class="block text-sm font-medium text-gray-700 mb-2">Tender Title</label>
@@ -425,12 +425,12 @@ import { ReactiveFormsModule } from '@angular/forms';
   <select multiple [formControl]="complianceLevelsCtrl"
           class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
                  focus:border-blue-500 focus:ring focus:ring-blue-200">
-    <option *ngFor="let cl of complianceLevelsOptions" [value]="cl"  (mousedown)="toggleFromSelect(complianceLevelsCtrl, cl, $event)">{{ cl }}</option>
+    <option *ngFor="let cl of complianceLevelsOptions" [value]="cl"  (mousedown)="toggleFromSelect(complianceLevelsCtrl, cl, $event)">{{ complianceLevelsName(cl) }}</option>
   </select>
 </div>
 
     <!-- Clear button -->
-    <div class="md:col-span-2 flex justify-start gap-x-2 mt-2 md:mt-0">
+    <div class="md:col-span-2 flex justify-start gap-x-2 mb-2 mt-2 md:mt-0">
       <button type="button"
               (click)="clearFilters()"
               class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200">
@@ -638,7 +638,7 @@ export class ProviderListComponent implements OnInit {
     countries: [],
     complianceLevels: []
   };
- 
+  complianceLevelsName = complianceLevelsName;
   countryName = countryName;
   ngOnInit() {
     this.loadFilterOptions();

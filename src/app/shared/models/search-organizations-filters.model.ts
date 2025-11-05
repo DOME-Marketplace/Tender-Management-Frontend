@@ -18,7 +18,19 @@ export function countryName(code: string | null | undefined): string {
   return regionNames.of(normalized) ?? upper;
 }
 
+export function complianceLevelsName(code: string | null | undefined): string {
+  if (!code) return '';
 
+  const upper = code.toUpperCase();
+
+  const map: Record<string, string> = {
+    'BL': 'Baseline',
+    'P': 'Professional',
+    'P+': 'Professional+',
+  };
+
+  return map[upper] ?? upper;
+}
 
 
 

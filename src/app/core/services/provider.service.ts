@@ -97,8 +97,7 @@ export class ProviderService {
   }
 
   getProvidersForTenderNew(filters: SearchOrganizationsFilters): Observable<Provider[]> {
-
-    const url = '/org-api/searchOrganizations';
+    const url = environment.searchOrganizationsEndpoint;
 
     return this.http.post<any>(url, filters).pipe(
       map((response) => {
@@ -115,7 +114,8 @@ export class ProviderService {
 
   // ADD inside ProviderService class
 getFilterOptions(): Observable<FilterOptions> {
-  const categories$ = this.http.get<any>('/org-api/categories').pipe(
+  const base = environment.searchOrganizationsEndpoint.replace(/\/searchOrganizations$/, '');
+  const categories$ = this.http.get<any>(`${base}/categories`).pipe(
     map(res => (Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [])),
     catchError(err => {
       console.warn('Categories API failed:', err);
@@ -123,7 +123,7 @@ getFilterOptions(): Observable<FilterOptions> {
     })
   );
 
-  const countries$ = this.http.get<any>('/org-api/countries').pipe(
+  const countries$ = this.http.get<any>(`${base}/countries`).pipe(
     map(res => (Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [])),
     catchError(err => {
       console.warn('Countries API failed:', err);
@@ -131,7 +131,7 @@ getFilterOptions(): Observable<FilterOptions> {
     })
   );
 
-  const complianceLevels$ = this.http.get<any>('/org-api/complianceLevels').pipe(
+  const complianceLevels$ = this.http.get<any>(`${base}/complianceLevels`).pipe(
     map(res => (Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [])),
     catchError(err => {
       console.warn('ComplianceLevels API failed:', err);
