@@ -10,7 +10,7 @@ import { TenderService } from '../../../../core/services/tender.service';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../../../shared/models/tender.model';
-import { SearchOrganizationsFilters } from '../../../../shared/models/search-organizations-filters.model';
+import { SearchOrganizationsFilters,countryName } from '../../../../shared/models/search-organizations-filters.model';
 import { FormControl } from '@angular/forms';
 import { ReactiveFormsModule } from '@angular/forms';
 
@@ -301,7 +301,7 @@ import { ReactiveFormsModule } from '@angular/forms';
             </button>
             <button 
               (click)="proceedToProviderSelection()"
-              [disabled]="!isStep2Complete()&& false "
+              [disabled]="!isStep2Complete() "
               [title]="!isStep2Complete() ? 'Complete all fields first' : ''"
               class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed relative group"
             >
@@ -317,7 +317,7 @@ import { ReactiveFormsModule } from '@angular/forms';
         </div>
 
         <!-- Step 3: Provider Selection -->
-        <div *ngIf="tenderCreationStep === 3">
+        <div *ngIf="tenderCreationStep === 3 ">
           <!-- Display Title (Read-only) -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <label class="block text-sm font-medium text-gray-700 mb-2">Tender Title</label>
@@ -396,8 +396,8 @@ import { ReactiveFormsModule } from '@angular/forms';
 
 
 
-  <!-- Responsive grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+  <!-- Responsive grid 11111111111111111111111111111111-->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 
     <!-- Left column -->
     <div>
@@ -405,7 +405,7 @@ import { ReactiveFormsModule } from '@angular/forms';
   <select multiple [formControl]="countriesCtrl"
           class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
                  focus:border-blue-500 focus:ring focus:ring-blue-200">
-    <option *ngFor="let c of countriesOptions" [value]="c">{{ c }}</option>
+    <option *ngFor="let c of countriesOptions" [value]="c"  (mousedown)="toggleFromSelect(countriesCtrl, c, $event)">{{ countryName(c) }}</option>
   </select>
 </div>
 
@@ -415,7 +415,7 @@ import { ReactiveFormsModule } from '@angular/forms';
   <select multiple [formControl]="categoriesCtrl"
           class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
                  focus:border-blue-500 focus:ring focus:ring-blue-200">
-    <option *ngFor="let cat of categoriesOptions" [value]="cat">{{ cat }}</option>
+    <option *ngFor="let cat of categoriesOptions" [value]="cat"  (mousedown)="toggleFromSelect(categoriesCtrl, cat, $event)">{{ cat }}</option>
   </select>
 </div>
 
@@ -425,22 +425,20 @@ import { ReactiveFormsModule } from '@angular/forms';
   <select multiple [formControl]="complianceLevelsCtrl"
           class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
                  focus:border-blue-500 focus:ring focus:ring-blue-200">
-    <option *ngFor="let cl of complianceLevelsOptions" [value]="cl">{{ cl }}</option>
+    <option *ngFor="let cl of complianceLevelsOptions" [value]="cl"  (mousedown)="toggleFromSelect(complianceLevelsCtrl, cl, $event)">{{ cl }}</option>
   </select>
 </div>
 
     <!-- Clear button -->
-    <div class="md:col-span-2 flex justify-start">
+    <div class="md:col-span-2 flex justify-start gap-x-2 mt-2 md:mt-0">
       <button type="button"
               (click)="clearFilters()"
-              class="mt-4 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm
-                     hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300">
+              class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200">
         Clear Filters
       </button>
        <button type="button"
               (click)="emitFilters()"
-              class="mt-4 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm
-                     hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300">
+              class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50">
         Search
       </button>
     </div>
@@ -632,13 +630,16 @@ export class ProviderListComponent implements OnInit {
 
   countriesCtrl = new FormControl<string[]>([], { nonNullable: true });
   categoriesCtrl = new FormControl<string[]>([], { nonNullable: true });
+  complianceLevelsCtrl = new FormControl<string[]>([], { nonNullable: true });
 
   // Default organization search filters
   orgFilters: SearchOrganizationsFilters = {
     categories: [],
-    countries: []
+    countries: [],
+    complianceLevels: []
   };
-  console = console;
+ 
+  countryName = countryName;
   ngOnInit() {
     this.loadFilterOptions();
     this.loadProviders();
@@ -663,7 +664,8 @@ export class ProviderListComponent implements OnInit {
   emitFilters(): void {
     const newFilters: SearchOrganizationsFilters = {
       countries: this.countriesCtrl.value ?? [],
-      categories: this.categoriesCtrl.value ?? []
+      categories: this.categoriesCtrl.value ?? [],
+      complianceLevels: this.complianceLevelsCtrl.value ?? []
     };
     console.log(newFilters);
     this.orgFilters = newFilters;
@@ -674,13 +676,15 @@ export class ProviderListComponent implements OnInit {
   hasActiveFilters(): boolean {
     const hasCountries = (this.orgFilters.countries?.length ?? 0) == 0;
     const hasCategories = (this.orgFilters.categories?.length ?? 0) == 0;
+    const hasComplianceLevels = (this.orgFilters.complianceLevels?.length ?? 0) == 0;
 
-    return hasCountries && hasCategories;
+    return hasCountries && hasCategories && hasComplianceLevels;
   }
   clearFilters() {
     // Reset both controls to empty arrays (and emit change)
     this.countriesCtrl.setValue([], { emitEvent: true });
     this.categoriesCtrl.setValue([], { emitEvent: true });
+    this.complianceLevelsCtrl.setValue([], { emitEvent: true });
 
     // If you rely on (change) only, also call emit explicitly:
     this.emitFilters();
@@ -1641,6 +1645,7 @@ export class ProviderListComponent implements OnInit {
   }
 
   private loadFilterOptions(): void {
+    this.clearFilters();
     this.providerService.getFilterOptions().subscribe({
       next: ({ categories, countries, complianceLevels }) => {
         this.categoriesOptions = categories ?? [];
@@ -1652,5 +1657,18 @@ export class ProviderListComponent implements OnInit {
       }
     });
   }
+
+
+  toggleFromSelect(ctrl: FormControl<string[]>, value: string, event: MouseEvent) {
+  event.preventDefault(); // stop native multi-select behavior
+  event.stopPropagation();
+
+  const cur = ctrl.value ?? [];
+  const next = cur.includes(value)
+    ? cur.filter(v => v !== value)
+    : [...cur, value];
+
+  ctrl.setValue(next);
+}
 
 }
