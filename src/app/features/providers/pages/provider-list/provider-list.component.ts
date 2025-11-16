@@ -971,7 +971,7 @@ export class ProviderListComponent implements OnInit {
         // Parse each quote to extract provider info
         quotes.forEach(quote => {
           // Find the Seller in relatedParty
-          const sellerParty = quote.relatedParty?.find(p => p.role === 'Seller');
+          const sellerParty = quote.relatedParty?.find(p => p.role?.toLowerCase() === 'seller');
           
           if (sellerParty && quote.id) {
             // Find the matching provider in our providers list

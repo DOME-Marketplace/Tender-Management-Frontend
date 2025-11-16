@@ -517,7 +517,7 @@ export class TenderService extends ApiService {
 
     // Extract selected providers from related parties
     const selectedProviders = quote.relatedParty
-      ?.filter(party => party.role === 'Seller')
+      ?.filter(party => party.role?.toLowerCase() === 'seller')
       .map(party => party.id) || [];
 
     // Map quote category to tender category
@@ -540,7 +540,7 @@ export class TenderService extends ApiService {
     // Extract external_id and provider from quote
     const external_id = quote.externalId;
     const provider = quote.relatedParty
-      ?.find(party => party.role === 'Seller')
+      ?.find(party => party.role?.toLowerCase() === 'seller')
       ?.name;
 
     return {
