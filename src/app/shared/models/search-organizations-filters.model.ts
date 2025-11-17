@@ -12,9 +12,10 @@ const codeAliases: Record<string, string> = {
 };
 
 export function countryName(code: string | null | undefined): string {
+  if( code?.length !== 2 ) return code ?? '';
   if (!code) return '';
   const upper = code.toUpperCase();
-  const normalized = codeAliases[upper] ?? upper;
+  const normalized = codeAliases?.[upper] ?? upper;
   return regionNames.of(normalized) ?? upper;
 }
 

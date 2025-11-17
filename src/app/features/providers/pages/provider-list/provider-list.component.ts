@@ -147,7 +147,7 @@ import { ReactiveFormsModule } from '@angular/forms';
     </div>
 
     <!-- Tender Creation Modal -->
-    <div *ngIf="showTenderModal || true" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
+    <div *ngIf="showTenderModal " class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
       <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white" (click)="$event.stopPropagation()">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-bold text-gray-900">{{ editingTenderId ? 'Edit Tender' : 'Create New Tender' }}</h3>
@@ -317,7 +317,7 @@ import { ReactiveFormsModule } from '@angular/forms';
         </div>
 
         <!-- Step 3: Provider Selection -->
-        <div *ngIf="tenderCreationStep === 3 || true ">
+        <div *ngIf="tenderCreationStep === 3  ">
           <!-- Display Title (Read-only) -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <label class="block text-sm font-medium text-gray-700 mb-2">Tender Title</label>
