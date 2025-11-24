@@ -14,6 +14,7 @@ import { ConfirmDialogComponent } from '../../../../shared/components/confirm-di
 import { QuoteDetailsModalComponent } from '../../../../shared/components/quote-details-modal/quote-details-modal.component';
 import { ChatModalComponent } from '../../../../shared/components/chat-modal/chat-modal.component';
 import { AttachmentModalComponent } from '../../../../shared/components/attachment-modal/attachment-modal.component';
+import { UI_ROLES, API_ROLES, UiRole, toApiRole } from '../../../../shared/constants/roles.constants';
 
 @Component({
   selector: 'app-quote-list',
@@ -54,18 +55,18 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
       <div class="mb-6">
         <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
           <button
-            (click)="selectRole('customer')"
-            [class]="getRoleTabClass('customer')"
+            (click)="selectRole(UI_ROLES.BUYER)"
+            [class]="getRoleTabClass(UI_ROLES.BUYER)"
             class="flex-1 px-8 py-4 text-2xl font-medium rounded-md transition-colors"
           >
             <svg class="w-6 h-6 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            As Customer
+            As Buyer
           </button>
           <button
-            (click)="selectRole('seller')"
-            [class]="getRoleTabClass('seller')"
+            (click)="selectRole(UI_ROLES.SELLER)"
+            [class]="getRoleTabClass(UI_ROLES.SELLER)"
             class="flex-1 px-8 py-4 text-2xl font-medium rounded-md transition-colors"
           >
             <svg class="w-6 h-6 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,8 +139,8 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
             <div class="col-span-2">Expected Fulfillment Start Date</div>
             <div class="col-span-2">Effective Quote Completion Date</div>
             <div class="col-span-2">ATTACHMENTS</div>
-            <div class="col-span-1" *ngIf="selectedRole === 'seller'">REQUEST</div>
-            <div [class.col-span-2]="selectedRole === 'customer'" [class.col-span-1]="selectedRole === 'seller'">ACTIONS</div>
+            <div class="col-span-1" *ngIf="selectedRole === UI_ROLES.SELLER">REQUEST</div>
+            <div [class.col-span-2]="selectedRole === UI_ROLES.BUYER" [class.col-span-1]="selectedRole === UI_ROLES.SELLER">ACTIONS</div>
           </div>
         </div>
         
@@ -218,7 +219,7 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                 </button>
                 <!-- Only providers can edit when attachment exists -->
                 <button
-                  *ngIf="selectedRole === 'seller' && (getPrimaryState(quote) === 'inProgress' || getPrimaryState(quote) === 'approved') && canAddAttachmentToTenderingQuote(quote)"
+                  *ngIf="selectedRole === UI_ROLES.SELLER && (getPrimaryState(quote) === 'inProgress' || getPrimaryState(quote) === 'approved') && canAddAttachmentToTenderingQuote(quote)"
                   [disabled]="isActionDisabled(quote, 'addAttachment')"
                   (click)="addAttachment(quote)"
                   class="text-blue-500 hover:text-blue-700 disabled:text-gray-300"
@@ -232,7 +233,7 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
               
               <!-- Add attachment button (Provider only, when no attachment) -->
               <button
-                *ngIf="!hasAttachment(quote) && selectedRole === 'seller' && (getPrimaryState(quote) === 'inProgress' || getPrimaryState(quote) === 'approved') && canAddAttachmentToTenderingQuote(quote)"
+                *ngIf="!hasAttachment(quote) && selectedRole === UI_ROLES.SELLER && (getPrimaryState(quote) === 'inProgress' || getPrimaryState(quote) === 'approved') && canAddAttachmentToTenderingQuote(quote)"
                 [disabled]="isActionDisabled(quote, 'addAttachment')"
                 (click)="addAttachment(quote)"
                 class="flex items-center space-x-1 text-blue-500 hover:text-blue-700 disabled:text-gray-300"
@@ -246,13 +247,13 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
             </div>
             
             <!-- Request Column (Provider only) -->
-            <div class="col-span-1 text-sm" *ngIf="selectedRole === 'seller'">
-              <!-- Download Customer's Request (Provider, tender quotes) -->
+            <div class="col-span-1 text-sm" *ngIf="selectedRole === UI_ROLES.SELLER">
+              <!-- Download Buyer's Request (Provider, tender quotes) -->
               <button
                 *ngIf="quote.category === 'tender'"
                 (click)="downloadCustomerRequest(quote)"
                 class="flex items-center space-x-1 text-blue-600 hover:text-blue-800"
-                title="Download Customer's Request (from coordinator)"
+                title="Download Buyer's Request (from coordinator)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -261,7 +262,7 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
             </div>
             
             <!-- Actions -->
-            <div [class.col-span-2]="selectedRole === 'customer'" [class.col-span-1]="selectedRole === 'seller'" class="flex flex-wrap gap-1">
+            <div [class.col-span-2]="selectedRole === UI_ROLES.BUYER" [class.col-span-1]="selectedRole === UI_ROLES.SELLER" class="flex flex-wrap gap-1">
               <!-- Test: Start Tender (for coordinator quotes in pre-launched status) -->
               <button
                 *ngIf="quote.category === 'coordinator' && getPrimaryState(quote) === 'inProgress'"
@@ -320,7 +321,7 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
               <ng-container *ngIf="!isQuoteFinalized(quote)">
                 <!-- Accept (Provider only, when tendering quote is pending AND coordinator quote is in progress) -->
                 <button
-                  *ngIf="selectedRole === 'seller' && quote.category === 'tender' && getPrimaryState(quote) === 'pending' && canAcceptTenderingQuote(quote)"
+                  *ngIf="selectedRole === UI_ROLES.SELLER && quote.category === 'tender' && getPrimaryState(quote) === 'pending' && canAcceptTenderingQuote(quote)"
                   [disabled]="isActionDisabled(quote, 'accept')"
                   (click)="acceptTenderingQuote(quote)"
                   [class]="getIconButtonClass(quote, 'accept', 'text-emerald-600 hover:text-emerald-700')"
@@ -331,9 +332,9 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                   </svg>
                 </button>
 
-                <!-- Accept (Customer only, when quote is approved and category is tender or tailored) -->
+                <!-- Accept (Buyer only, when quote is approved and category is tender or tailored) -->
                 <button
-                  *ngIf="selectedRole === 'customer' && getPrimaryState(quote) === 'approved' && (quote.category === 'tender' || quote.category === 'tailored')"
+                  *ngIf="selectedRole === UI_ROLES.BUYER && getPrimaryState(quote) === 'approved' && (quote.category === 'tender' || quote.category === 'tailored')"
                   [disabled]="isActionDisabled(quote, 'acceptCustomer')"
                   (click)="acceptQuoteCustomer(quote)"
                   [class]="getIconButtonClass(quote, 'acceptCustomer', 'text-emerald-600 hover:text-emerald-700')"
@@ -344,9 +345,9 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                   </svg>
                 </button>
 
-                <!-- Accept Tender (Customer only, when tender quote is approved) -->
+                <!-- Accept Tender (Buyer only, when tender quote is approved) -->
                 <button
-                  *ngIf="selectedRole === 'customer' && quote.category === 'tender' && getPrimaryState(quote) === 'approved'"
+                  *ngIf="selectedRole === UI_ROLES.BUYER && quote.category === 'tender' && getPrimaryState(quote) === 'approved'"
                   [disabled]="isActionDisabled(quote, 'acceptTender')"
                   (click)="acceptTenderQuote(quote)"
                   [class]="getIconButtonClass(quote, 'acceptTender', 'text-emerald-600 hover:text-emerald-700')"
@@ -357,9 +358,9 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                   </svg>
                 </button>
 
-                <!-- Reject Tender (Customer only, when tender quote is approved) -->
+                <!-- Reject Tender (Buyer only, when tender quote is approved) -->
                 <button
-                  *ngIf="selectedRole === 'customer' && quote.category === 'tender' && getPrimaryState(quote) === 'approved'"
+                  *ngIf="selectedRole === UI_ROLES.BUYER && quote.category === 'tender' && getPrimaryState(quote) === 'approved'"
                   [disabled]="isActionDisabled(quote, 'rejectTender')"
                   (click)="rejectTenderQuote(quote)"
                   [class]="getIconButtonClass(quote, 'rejectTender', 'text-red-500 hover:text-red-700')"
@@ -372,7 +373,7 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                 
                 <!-- Cancel (Provider only, when tendering quote is pending) -->
                 <button
-                  *ngIf="selectedRole === 'seller' && quote.category === 'tender' && getPrimaryState(quote) === 'pending'"
+                  *ngIf="selectedRole === UI_ROLES.SELLER && quote.category === 'tender' && getPrimaryState(quote) === 'pending'"
                   [disabled]="isActionDisabled(quote, 'cancel')"
                   (click)="cancelTenderingQuote(quote)"
                   [class]="getIconButtonClass(quote, 'cancel', 'text-red-500 hover:text-red-700')"
@@ -485,9 +486,9 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                         </svg>
                       </button>
 
-                      <!-- Accept Tender (Customer only, when tender quote is approved) -->
+                      <!-- Accept Tender (Buyer only, when tender quote is approved) -->
                       <button
-                        *ngIf="selectedRole === 'customer' && relatedQuote.category === 'tender' && getPrimaryState(relatedQuote) === 'approved'"
+                        *ngIf="selectedRole === UI_ROLES.BUYER && relatedQuote.category === 'tender' && getPrimaryState(relatedQuote) === 'approved'"
                         [disabled]="isActionDisabled(relatedQuote, 'acceptTender')"
                         (click)="acceptTenderQuote(relatedQuote)"
                         [class]="getIconButtonClass(relatedQuote, 'acceptTender', 'text-emerald-600 hover:text-emerald-700')"
@@ -498,9 +499,9 @@ import { AttachmentModalComponent } from '../../../../shared/components/attachme
                         </svg>
                       </button>
 
-                      <!-- Reject Tender (Customer only, when tender quote is approved) -->
+                      <!-- Reject Tender (Buyer only, when tender quote is approved) -->
                       <button
-                        *ngIf="selectedRole === 'customer' && relatedQuote.category === 'tender' && getPrimaryState(relatedQuote) === 'approved'"
+                        *ngIf="selectedRole === UI_ROLES.BUYER && relatedQuote.category === 'tender' && getPrimaryState(relatedQuote) === 'approved'"
                         [disabled]="isActionDisabled(relatedQuote, 'rejectTender')"
                         (click)="rejectTenderQuote(relatedQuote)"
                         [class]="getIconButtonClass(relatedQuote, 'rejectTender', 'text-red-500 hover:text-red-700')"
@@ -706,8 +707,11 @@ export class QuoteListComponent implements OnInit {
   availableStates: QuoteStateType[] = ['pending', 'inProgress', 'approved', 'rejected', 'cancelled', 'accepted'];
 
   // Role management
-  selectedRole: 'customer' | 'seller' = 'customer';
+  selectedRole: UiRole = UI_ROLES.BUYER;
   currentUserId: string | null = null;
+  
+  // Expose constants to template
+  readonly UI_ROLES = UI_ROLES;
 
   // Filtering
   statusFilter: string = '';
@@ -762,8 +766,8 @@ export class QuoteListComponent implements OnInit {
     // Use specific API endpoints based on role
     let quotesObservable: Observable<Quote[]>;
     
-    if (this.selectedRole === 'customer') {
-      // Customer view: Get coordinator quotes they created (raw)
+    if (this.selectedRole === UI_ROLES.BUYER) {
+      // Buyer view: Get coordinator quotes they created (raw)
       quotesObservable = this.tenderService.getCoordinatorQuotesRaw(this.currentUserId);
     } else {
       // Seller/Provider view: Get tendering quotes they received (raw)
@@ -790,16 +794,16 @@ export class QuoteListComponent implements OnInit {
           });
           
           // For provider view, check if this quote is related to current user
-          if (this.selectedRole === 'seller') {
+          if (this.selectedRole === UI_ROLES.SELLER) {
             const isRelatedToUser = quote.relatedParty?.some(party => 
-              party.id === this.currentUserId && party.role?.toLowerCase() === 'seller'
+              party.id === this.currentUserId && party.role?.toLowerCase() === UI_ROLES.SELLER
             );
             console.log(`  -> Quote ${this.extractShortId(quote.id)} related to current provider? ${isRelatedToUser}`);
           }
         });
         
         // If in seller mode, load coordinator states for tendering quotes
-        if (this.selectedRole === 'seller') {
+        if (this.selectedRole === UI_ROLES.SELLER) {
           this.loadCoordinatorStatesForTenderingQuotes();
         }
         
@@ -854,12 +858,12 @@ export class QuoteListComponent implements OnInit {
     this.loadQuotes();
   }
 
-  selectRole(role: 'customer' | 'seller') {
+  selectRole(role: UiRole) {
     this.selectedRole = role;
     this.loadQuotes();
   }
 
-  getRoleTabClass(role: 'customer' | 'seller'): string {
+  getRoleTabClass(role: UiRole): string {
     return this.selectedRole === role
       ? 'bg-white text-indigo-600 shadow-sm'
       : 'text-gray-500 hover:text-gray-700';
@@ -1025,7 +1029,7 @@ export class QuoteListComponent implements OnInit {
 
     // If the current user is a provider (seller) and the quote is in progress,
     // automatically update the status to 'approved' after successful PDF upload
-    if (this.selectedRole === 'seller' && this.getPrimaryState(updatedQuote) === 'inProgress') {
+    if (this.selectedRole === UI_ROLES.SELLER && this.getPrimaryState(updatedQuote) === 'inProgress') {
       console.log('Provider uploaded PDF, updating quote status to approved:', updatedQuote.id);
       
       this.tenderService.updateQuoteStatus(updatedQuote.id!, 'approved').subscribe({
@@ -1122,7 +1126,7 @@ export class QuoteListComponent implements OnInit {
   }
 
   /**
-   * Download the customer's request PDF from the coordinator quote referenced by a tender quote
+   * Download the buyer's request PDF from the coordinator quote referenced by a tender quote
    */
   downloadCustomerRequest(tenderQuote: Quote) {
     const coordinatorId = tenderQuote.externalId || tenderQuote.id;
@@ -1137,15 +1141,15 @@ export class QuoteListComponent implements OnInit {
           // Reuse download logic by wrapping the attachment into a Quote-like structure
           if (!coordinator.quoteItem || coordinator.quoteItem.length === 0 ||
               !coordinator.quoteItem[0].attachment || coordinator.quoteItem[0].attachment.length === 0) {
-            this.notificationService.showError(`No customer's request attachment found on coordinator quote.`);
+            this.notificationService.showError(`No buyer's request attachment found on coordinator quote.`);
             return;
           }
           // Use existing helper that handles both Tender and Quote types
           this.tenderService.downloadAttachment(coordinator);
           this.notificationService.showSuccess(`Download started`);
         } catch (err: any) {
-          console.error('Error downloading customer request:', err);
-          this.notificationService.showError(err.message || 'Error downloading customer request');
+          console.error('Error downloading buyer request:', err);
+          this.notificationService.showError(err.message || 'Error downloading buyer request');
         }
       },
       error: (error: Error) => {
@@ -1277,7 +1281,7 @@ export class QuoteListComponent implements OnInit {
       return;
     }
 
-    console.log('Customer accepting quotation:', quote.id);
+    console.log('Buyer accepting quotation:', quote.id);
     
     this.tenderService.updateQuoteStatus(quote.id!, 'accepted').subscribe({
       next: (updatedQuote: Quote) => {
@@ -1286,7 +1290,7 @@ export class QuoteListComponent implements OnInit {
           this.quotes[index] = updatedQuote;
           this.filterQuotesByStatus();
         }
-        console.log('Quotation successfully accepted by customer');
+        console.log('Quotation successfully accepted by buyer');
         this.notificationService.showSuccess(`Quotation ${shortId} has been accepted successfully.`);
       },
       error: (error: Error) => {
@@ -1301,7 +1305,7 @@ export class QuoteListComponent implements OnInit {
     const confirmAccept = confirm(`Are you sure you want to accept this quote? Every other quote in this tender will be Rejected`);
     if (!confirmAccept) return;
 
-    console.log('Customer accepting tender:', quote.id);
+    console.log('Buyer accepting tender:', quote.id);
 
     // Helper: find coordinator id (map key) that contains this related quote
     const findCoordinatorKeyForRelated = (): string | null => {
@@ -1379,7 +1383,7 @@ export class QuoteListComponent implements OnInit {
       return;
     }
 
-    console.log('Customer rejecting tender:', quote.id);
+    console.log('Buyer rejecting tender:', quote.id);
     
     this.tenderService.updateQuoteStatus(quote.id!, 'rejected').subscribe({
       next: (updatedQuote: Quote) => {
@@ -1388,7 +1392,7 @@ export class QuoteListComponent implements OnInit {
           this.quotes[index] = updatedQuote;
           this.filterQuotesByStatus();
         }
-        console.log('Tender successfully rejected by customer');
+        console.log('Tender successfully rejected by buyer');
         this.notificationService.showSuccess(`Tender ${shortId} has been rejected.`);
       },
       error: (error: Error) => {
@@ -1550,12 +1554,12 @@ export class QuoteListComponent implements OnInit {
         // It should not be disabled by finalization since it only shows when pending
         return false;
       case 'acceptCustomer':
-        // Customer accept button is only for customers when quote is approved
+        // Buyer accept button is only for buyers when quote is approved
         // It should not be disabled by finalization since it only shows when approved
         return false;
       case 'acceptTender':
       case 'rejectTender':
-        // Tender accept/reject buttons are only for customers when tender quote is approved
+        // Tender accept/reject buttons are only for buyers when tender quote is approved
         // They should not be disabled by finalization since they only show when approved
         return false;
       case 'addRequestedDate':
@@ -1717,7 +1721,7 @@ export class QuoteListComponent implements OnInit {
 
     console.log(`Loading related quotes for coordinator ${this.extractShortId(coordinatorQuote.id)}:`, {
       userId: this.currentUserId,
-      role: 'Customer',
+      role: API_ROLES.BUYER,
       externalId: externalIdToUse,
       coordinatorId: coordinatorQuote.id
     });
@@ -1727,7 +1731,7 @@ export class QuoteListComponent implements OnInit {
     // Fetch tendering quotes using the coordinator quote's ID as externalId
     this.tenderService.getTenderingQuotesRaw(
       this.currentUserId,
-      'Customer',
+      API_ROLES.BUYER,
       externalIdToUse
     ).subscribe({
       next: (relatedQuotes: Quote[]) => {

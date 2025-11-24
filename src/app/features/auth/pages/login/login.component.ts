@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { LoginService } from '../../../../core/services/login.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { UI_ROLES, UiRole } from '../../../../shared/constants/roles.constants';
 
 @Component({
   selector: 'app-login',
@@ -37,13 +38,13 @@ import { AuthService } from '../../../../core/services/auth.service';
             <p class="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">Quick Login (For Testing)</p>
             
             <div class="space-y-3">
-              <!-- Customer Option -->
+              <!-- Buyer Option -->
               <div class="bg-white p-3 rounded-md shadow-sm border border-gray-200 hover:border-indigo-300 transition-colors">
                 <div class="flex items-center justify-between mb-1">
-                  <span class="text-xs font-semibold text-indigo-600 uppercase">Customer</span>
+                  <span class="text-xs font-semibold text-indigo-600 uppercase">Buyer</span>
                   <button 
                     type="button"
-                    (click)="quickLogin('customer')"
+                    (click)="quickLogin(UI_ROLES.BUYER)"
                     class="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
                   >
                     Use This
@@ -60,7 +61,7 @@ import { AuthService } from '../../../../core/services/auth.service';
                   <span class="text-xs font-semibold text-green-600 uppercase">Provider</span>
                   <button 
                     type="button"
-                    (click)="quickLogin('provider')"
+                    (click)="quickLogin(UI_ROLES.SELLER)"
                     class="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
                   >
                     Use This
@@ -112,12 +113,15 @@ export class LoginComponent {
   private readonly CUSTOMER_ID = 'urn:ngsi-ld:organization:74ba5454-1fee-45ca-9ddf-211b56790398';
   private readonly PROVIDER_ID = 'urn:ngsi-ld:organization:d78d17c0-996e-4cee-a100-6d6f65a50459';
 
+  // Expose constants to template
+  readonly UI_ROLES = UI_ROLES;
+
   selectUserId(id: string) {
     this.userId = id;
   }
 
-  quickLogin(userType: 'customer' | 'provider') {
-    const id = userType === 'customer' ? this.CUSTOMER_ID : this.PROVIDER_ID;
+  quickLogin(userType: UiRole) {
+    const id = userType === UI_ROLES.BUYER ? this.CUSTOMER_ID : this.PROVIDER_ID;
     this.userId = id;
     this.onLogin();
   }

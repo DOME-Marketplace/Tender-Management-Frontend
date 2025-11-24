@@ -13,6 +13,7 @@ import { ChatModalComponent } from '../../../../shared/components/chat-modal/cha
 import { AttachmentModalComponent } from '../../../../shared/components/attachment-modal/attachment-modal.component';
 import { TenderService } from '../../../../core/services/tender.service';
 import { Tender } from '../../../../shared/models/tender.model';
+import { UI_ROLES, UiRole } from '../../../../shared/constants/roles.constants';
 
 @Component({
   selector: 'app-quote-list',
@@ -508,8 +509,11 @@ export class QuoteListComponent implements OnInit {
   availableStates: QuoteStateType[] = ['pending', 'inProgress', 'approved', 'rejected', 'cancelled', 'accepted'];
 
   // Role management
-  selectedRole: 'customer' | 'seller' = 'customer';
+  selectedRole: UiRole = UI_ROLES.BUYER;
   currentUserId: string | null = null;
+  
+  // Expose constants to template
+  readonly UI_ROLES = UI_ROLES;
 
   // Filtering
   statusFilter: string = '';
@@ -601,12 +605,12 @@ export class QuoteListComponent implements OnInit {
     this.loadTenders();
   }
 
-  selectRole(role: 'customer' | 'seller') {
+  selectRole(role: UiRole) {
     this.selectedRole = role;
     // Tenders don't need role-based loading
   }
 
-  getRoleTabClass(role: 'customer' | 'seller'): string {
+  getRoleTabClass(role: UiRole): string {
     return this.selectedRole === role
       ? 'bg-white text-indigo-600 shadow-sm'
       : 'text-gray-500 hover:text-gray-700';
@@ -795,7 +799,7 @@ export class QuoteListComponent implements OnInit {
       return;
     }
 
-    console.log('Customer accepting quotation:', quote.id);
+    console.log('Buyer accepting quotation:', quote.id);
     
     this.quoteService.updateQuoteStatus(quote.id!, 'accepted').subscribe({
       next: (updatedQuote) => {
@@ -804,7 +808,7 @@ export class QuoteListComponent implements OnInit {
           this.quotes[index] = updatedQuote;
           this.filterQuotesByStatus();
         }
-        console.log('Quotation successfully accepted by customer');
+        console.log('Quotation successfully accepted by buyer');
         this.notificationService.showSuccess(`Quotation ${shortId} has been accepted successfully.`);
       },
       error: (error) => {
@@ -972,13 +976,13 @@ export class QuoteListComponent implements OnInit {
       case 'cancel':
         return isFinalized; // Disabled for both accepted and cancelled
       case 'downloadAttachment':
-        return isCancelled; // Only disabled for cancelled quotes, customers can download when accepted
+        return isCancelled; // Only disabled for cancelled quotes, buyers can download when accepted
       case 'accept':
         // Accept button is only for providers when quote is pending
         // It should not be disabled by finalization since it only shows when pending
         return false;
       case 'acceptCustomer':
-        // Customer accept button is only for customers when quote is approved
+        // Buyer accept button is only for buyers when quote is approved
         // It should not be disabled by finalization since it only shows when approved
         return false;
       case 'addRequestedDate':

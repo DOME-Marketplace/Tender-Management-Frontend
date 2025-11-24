@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Quote, Quote_Create, Quote_Update, QuoteStateType } from '@app/shared/models/quote.model';
 import { environment } from '../../../../environments/environment';
+import { UiRole, toApiRole } from '@app/shared/constants/roles.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -145,10 +146,10 @@ export class QuoteService {
    * Get quotes by user with role filtering
    * GET /quoteByUser/{userId}?role={role}
    */
-  getQuotesByUserAndRole(userId: string, role: 'customer' | 'seller'): Observable<Quote[]> {
+  getQuotesByUserAndRole(userId: string, role: UiRole): Observable<Quote[]> {
     let params = new HttpParams();
-    // API expects 'Customer' or 'Seller' (capitalized)
-    const apiRole = role === 'customer' ? 'Customer' : 'Seller';
+    // Convert UI role to API role (capitalized)
+    const apiRole = toApiRole(role);
     params = params.set('role', apiRole);
     
     const encodedUserId = encodeURIComponent(userId);

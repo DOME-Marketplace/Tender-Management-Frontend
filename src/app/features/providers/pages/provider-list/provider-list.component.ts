@@ -10,6 +10,7 @@ import { TenderService } from '../../../../core/services/tender.service';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../../../shared/models/tender.model';
+import { API_ROLES } from '../../../../shared/constants/roles.constants';
 
 @Component({
   selector: 'app-provider-list',
@@ -961,7 +962,7 @@ export class ProviderListComponent implements OnInit {
 
     this.tenderLoading = true;
     
-    this.tenderService.getTenderingQuotesRaw(userId, 'Customer', this.createdQuoteId).subscribe({
+    this.tenderService.getTenderingQuotesRaw(userId, API_ROLES.BUYER, this.createdQuoteId).subscribe({
       next: (quotes) => {
         console.log('Received tendering quotes:', quotes);
         
