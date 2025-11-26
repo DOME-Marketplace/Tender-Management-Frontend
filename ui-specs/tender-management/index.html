@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tender Management UI/UX Spec - Static Mock</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Marketplace Workspace</div>
+    <div class="top-actions">
+      <div class="role-badges" title="Tender Management menu is visible only for buyers and sellers">
+        <span class="chip chip-buy">Buyer</span>
+        <span class="chip chip-sell">Seller</span>
+      </div>
+      <div class="user-menu">
+        <span class="user-name">Alex Taylor v</span>
+        <div class="menu-panel">
+          <a class="menu-item">Profile</a>
+          <a class="menu-item">Product Orders</a>
+          <a class="menu-item active" title="Opens the Tender Dashboard">Tender Management</a>
+          <a class="menu-item">Settings</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">Tender Management</div>
+      <a class="side-link active" href="#dashboard">Dashboard</a>
+      <a class="side-link" href="#new-tender">New Tender</a>
+      <a class="side-link subtle" href="#providers">Providers</a>
+    </aside>
+
+    <main class="content">
+      <section class="phase-badges">
+        <span class="phase">Phase 1: Base UI</span>
+        <span class="phase">Phase 2: Listing logic</span>
+        <span class="phase">Phase 3: Creation</span>
+        <span class="phase">Phase 4: Provider invitations</span>
+      </section>
+
+      <!-- DASHBOARD VIEW -->
+      <section id="dashboard" class="card">
+        <header class="card-head">
+          <div>
+            <p class="eyebrow">Dashboard</p>
+            <h1>Tenders overview</h1>
+            <p class="muted">White page layout aligned with marketplace orders. Tooltips on every icon and button.</p>
+          </div>
+          <div class="pill-actions">
+            <button class="ghost" title="Filters adapt to role rules">Role: Buyer</button>
+            <button class="ghost" title="Filters adapt to role rules">Role: Seller</button>
+          </div>
+        </header>
+
+        <div class="table-wrapper">
+          <div class="table-head">Buyer view - tenders I created</div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>TenderID</th>
+                <th>Name</th>
+                <th>Creation Date</th>
+                <th>Acceptance Deadline</th>
+                <th>Offering Deadline</th>
+                <th>Status</th>
+                <th>Participants</th>
+                <th class="actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#TND-1024</td>
+                <td>Edge Switches - Campus Refresh</td>
+                <td>12 Oct 2025</td>
+                <td>25 Oct 2025</td>
+                <td>02 Nov 2025</td>
+                <td><span class="badge badge-started" title="STARTED is visible to buyers and sellers">STARTED</span></td>
+                <td>12 <span class="muted">(8 acc / 4 decl)</span></td>
+                <td class="actions">
+                  <button class="icon-btn" data-tip="Tender details">View</button>
+                  <button class="icon-btn" data-tip="Manage status">Status</button>
+                  <button class="icon-btn" data-tip="Open chat">Chat</button>
+                </td>
+              </tr>
+              <tr>
+                <td>#TND-1031</td>
+                <td>Smart Meter Rollout - Phase B</td>
+                <td>18 Oct 2025</td>
+                <td>01 Nov 2025</td>
+                <td>10 Nov 2025</td>
+                <td><span class="badge badge-launched">LAUNCHED</span></td>
+                <td>6 <span class="muted">(4 acc / 2 decl)</span></td>
+                <td class="actions">
+                  <button class="icon-btn" data-tip="Tender details">View</button>
+                  <button class="icon-btn" data-tip="Manage status">Status</button>
+                  <button class="icon-btn" data-tip="Chat">Chat</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-wrapper">
+          <div class="table-head">Seller view - tenders I am invited to (DRAFT excluded)</div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>TenderID</th>
+                <th>Name</th>
+                <th>Creation Date</th>
+                <th>Acceptance Deadline</th>
+                <th>Offering Deadline</th>
+                <th>Status</th>
+                <th>Participants</th>
+                <th class="actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#TND-2014</td>
+                <td>Datacenter Fiber Upgrade</td>
+                <td>09 Oct 2025</td>
+                <td>20 Oct 2025</td>
+                <td>28 Oct 2025</td>
+                <td><span class="badge badge-started">STARTED</span></td>
+                <td>9 <span class="muted">(5 acc / 2 decl)</span></td>
+                <td class="actions">
+                  <button class="icon-btn" data-tip="Download brief">Download</button>
+                  <button class="icon-btn" data-tip="Participate (enables upload/decline)">Participate</button>
+                  <button class="icon-btn" data-tip="Decline invite">Decline</button>
+                </td>
+              </tr>
+              <tr class="row-disabled" title="Buttons locked after participate or decline">
+                <td>#TND-2029</td>
+                <td>Managed WAN Services</td>
+                <td>15 Oct 2025</td>
+                <td>26 Oct 2025</td>
+                <td>05 Nov 2025</td>
+                <td><span class="badge badge-started">STARTED</span></td>
+                <td>7 <span class="muted">(3 acc / 3 decl)</span></td>
+                <td class="actions">
+                  <button class="icon-btn" disabled title="Already responded">Download</button>
+                  <button class="icon-btn" disabled title="Already responded">Participate</button>
+                  <button class="icon-btn" disabled title="Already responded">Decline</button>
+                </td>
+              </tr>
+              <tr>
+                <td>#TND-2101</td>
+                <td>Cloud Migration Partner</td>
+                <td>21 Oct 2025</td>
+                <td>02 Nov 2025</td>
+                <td>12 Nov 2025</td>
+                <td><span class="badge badge-launched">LAUNCHED</span></td>
+                <td>5 <span class="muted">(4 acc / 1 decl)</span></td>
+                <td class="actions">
+                  <button class="icon-btn" data-tip="Download pack">Download</button>
+                  <button class="icon-btn" data-tip="Upload proposal">Upload</button>
+                  <button class="icon-btn" data-tip="Chat with buyer">Chat</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="caption">Buttons disappear when the tender is closed or assigned.</p>
+        </div>
+      </section>
+
+      <!-- NEW TENDER FLOW -->
+      <section id="new-tender" class="card">
+        <header class="card-head">
+          <div>
+            <p class="eyebrow">New Tender</p>
+            <h2>Create and launch (buyer only)</h2>
+            <p class="muted">Participants tab stays locked until the draft is saved. Status starts as DRAFT.</p>
+          </div>
+          <button class="ghost" title="Back returns to dashboard">Back to Dashboard</button>
+        </header>
+
+        <div class="tabs">
+          <div class="tab active">General description</div>
+          <div class="tab disabled" title="Disabled until Save">Participants</div>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Name *</span>
+            <input type="text" placeholder="Fiber backhaul expansion" />
+          </label>
+          <label class="field">
+            <span>Auto-ID</span>
+            <input type="text" value="Auto-generated" disabled />
+          </label>
+          <label class="field">
+            <span>Acceptance deadline *</span>
+            <input type="date" />
+          </label>
+          <label class="field">
+            <span>Offering deadline *</span>
+            <input type="date" />
+          </label>
+          <label class="field full">
+            <span>General description *</span>
+            <textarea rows="3" placeholder="What do you need, scope, constraints..."></textarea>
+          </label>
+          <label class="field">
+            <span>Attachment (PDF) *</span>
+            <div class="upload-box" title="Attachment required before moving to STARTED">
+              <span>Drop file or click to upload</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="validation">
+          <div class="badge badge-started">DRAFT to STARTED rules</div>
+          <ul>
+            <li>Auto-ID present</li>
+            <li>Name provided</li>
+            <li>Valid dates (acceptance <= offering)</li>
+            <li>Attachment uploaded</li>
+            <li>At least one provider selected</li>
+          </ul>
+        </div>
+
+        <div class="actions-row">
+          <button class="primary" title="Save keeps user on the page">Save draft</button>
+          <button class="ghost" title="Return without saving changes">Back</button>
+        </div>
+      </section>
+
+      <!-- PROVIDER INVITATIONS -->
+      <section id="providers" class="card">
+        <header class="card-head">
+          <div>
+            <p class="eyebrow">Provider invitations</p>
+            <h2>Manage selected providers and search</h2>
+            <p class="muted">Tabs: Selected Providers | Add new provider. Demo picker replaced with marketplace-style UI.</p>
+          </div>
+        </header>
+
+        <div class="tabs">
+          <div class="tab active">Selected Providers (5)</div>
+          <div class="tab">Add new provider</div>
+        </div>
+
+        <div class="table-wrapper compact">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Invitation date</th>
+                <th>Acceptance</th>
+                <th>Proposal file / date</th>
+                <th>Proposal status</th>
+                <th class="actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Northwind Networks</td>
+                <td>14 Oct 2025</td>
+                <td>Accepted</td>
+                <td>bid-nn.pdf / 18 Oct</td>
+                <td><span class="badge badge-launched">In review</span></td>
+                <td class="actions">
+                  <button class="icon-btn" data-tip="Accept proposal (LAUNCHED only)">Accept</button>
+                  <button class="icon-btn" data-tip="Refuse proposal">Refuse</button>
+                </td>
+              </tr>
+              <tr>
+                <td>Vertex Fiber</td>
+                <td>16 Oct 2025</td>
+                <td>Pending</td>
+                <td>-</td>
+                <td><span class="badge badge-started">Waiting</span></td>
+                <td class="actions">
+                  <button class="icon-btn" data-tip="Remove (DRAFT only)">Remove</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="filters">
+          <div class="filter-group">
+            <label>Name</label>
+            <input type="text" placeholder="Search by name" />
+          </div>
+          <div class="filter-group">
+            <label>Country</label>
+            <div class="pill-input" title="OR inside group, AND across groups">
+              <span class="pill">Italy x</span>
+              <span class="pill">Spain x</span>
+              <button class="pill ghost">+ Add</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Service Type</label>
+            <div class="pill-input">
+              <span class="pill">Fiber rollout x</span>
+              <span class="pill">CPE supply x</span>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Market</label>
+            <div class="pill-input">
+              <span class="pill">Enterprise x</span>
+              <span class="pill">Public Sector x</span>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Category</label>
+            <div class="pill-input">
+              <span class="pill">Connectivity x</span>
+              <span class="pill">Managed services x</span>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Compliance</label>
+            <div class="pill-input">
+              <span class="pill">ISO 27001 x</span>
+              <span class="pill">Baseline x</span>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Certs</label>
+            <div class="pill-input">
+              <span class="pill">5G ready x</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="search-results">
+          <div class="results-head">18 results - showing top 5</div>
+          <div class="result-list">
+            <label class="result-card">
+              <input type="checkbox" />
+              <div class="result-body">
+                <div class="result-title">Aether Comms</div>
+                <div class="result-meta">Italy | Connectivity | ISO 27001</div>
+                <button class="link" title="Opens profile popup">View profile</button>
+              </div>
+            </label>
+            <label class="result-card">
+              <input type="checkbox" />
+              <div class="result-body">
+                <div class="result-title">Blue Ridge Fiber</div>
+                <div class="result-meta">Spain | Fiber rollout | Baseline</div>
+                <button class="link">View profile</button>
+              </div>
+            </label>
+            <label class="result-card">
+              <input type="checkbox" />
+              <div class="result-body">
+                <div class="result-title">Nimbus Edge</div>
+                <div class="result-meta">France | Edge services | ISO 27001</div>
+                <button class="link">View profile</button>
+              </div>
+            </label>
+            <label class="result-card">
+              <input type="checkbox" />
+              <div class="result-body">
+                <div class="result-title">CoreLink Systems</div>
+                <div class="result-meta">Germany | Managed services | Professional+</div>
+                <button class="link">View profile</button>
+              </div>
+            </label>
+            <label class="result-card">
+              <input type="checkbox" />
+              <div class="result-body">
+                <div class="result-title">Wavelength Partners</div>
+                <div class="result-meta">UK | Connectivity | Baseline</div>
+                <button class="link">View profile</button>
+              </div>
+            </label>
+          </div>
+          <div class="actions-row">
+            <button class="primary" title="Save avoids duplicates">Save selection</button>
+            <button class="ghost" title="Back returns to Selected Providers tab">Back</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
