@@ -109,7 +109,7 @@ export class LoginComponent {
   private loginService = inject(LoginService);
   private authService = inject(AuthService);
 
-  private readonly CUSTOMER_ID = 'urn:ngsi-ld:individual:ab450747-7204-448b-8a8c-77b88f46e81f';
+  private readonly CUSTOMER_ID = 'urn:ngsi-ld:organization:d78d17c0-996e-4cee-a100-6d6f65a50459';
   private readonly PROVIDER_ID = 'urn:ngsi-ld:organization:38817de3-8c3e-4141-a344-86ffd915cc3b';
 
   selectUserId(id: string) {

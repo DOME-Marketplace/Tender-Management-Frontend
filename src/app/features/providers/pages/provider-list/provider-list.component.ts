@@ -1251,7 +1251,7 @@ export class ProviderListComponent implements OnInit {
     this.tenderLoading = true;
 
     const providerIds = Array.from(this.selectedProviders);
-    debugger;
+    
 
     const customerMessage = this.tenderTitle; // Use tender title as customer message
 
