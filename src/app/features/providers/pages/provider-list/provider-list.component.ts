@@ -10,11 +10,14 @@ import { TenderService } from '../../../../core/services/tender.service';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../../../shared/models/tender.model';
+import { SearchOrganizationsFilters,countryName,complianceLevelsName} from '../../../../shared/models/search-organizations-filters.model';
+import { FormControl } from '@angular/forms';
+import { ReactiveFormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-provider-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, NotificationComponent],
+  imports: [CommonModule, FormsModule, NotificationComponent, ReactiveFormsModule],
   template: `
     <app-notification></app-notification>
     
@@ -144,7 +147,7 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
     </div>
 
     <!-- Tender Creation Modal -->
-    <div *ngIf="showTenderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
+    <div *ngIf="showTenderModal " class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="closeTenderModal()">
       <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white" (click)="$event.stopPropagation()">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-bold text-gray-900">{{ editingTenderId ? 'Edit Tender' : 'Create New Tender' }}</h3>
@@ -298,7 +301,7 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
             </button>
             <button 
               (click)="proceedToProviderSelection()"
-              [disabled]="!isStep2Complete()"
+              [disabled]="!isStep2Complete() "
               [title]="!isStep2Complete() ? 'Complete all fields first' : ''"
               class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed relative group"
             >
@@ -314,7 +317,7 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
         </div>
 
         <!-- Step 3: Provider Selection -->
-        <div *ngIf="tenderCreationStep === 3">
+        <div *ngIf="tenderCreationStep === 3  ">
           <!-- Display Title (Read-only) -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <label class="block text-sm font-medium text-gray-700 mb-2">Tender Title</label>
@@ -388,10 +391,69 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
               <label class="block text-sm font-medium text-gray-700 mb-3">
                 Select Providers to Invite
               </label>
+           
+               <div class=" bg-white rounded-lg shadow-sm">
+
+
+
+  <!-- Responsive grid 11111111111111111111111111111111-->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+
+    <!-- Left column -->
+    <div>
+  <label class="block text-sm font-medium text-gray-700 mb-2">Countries</label>
+  <select multiple [formControl]="countriesCtrl"
+          class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+                 focus:border-blue-500 focus:ring focus:ring-blue-200">
+    <option *ngFor="let c of countriesOptions" [value]="c"  (mousedown)="toggleFromSelect(countriesCtrl, c, $event)">{{ countryName(c) }}</option>
+  </select>
+</div>
+
+<!-- Categories -->
+<div>
+  <label class="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+  <select multiple [formControl]="categoriesCtrl"
+          class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+                 focus:border-blue-500 focus:ring focus:ring-blue-200">
+    <option *ngFor="let cat of categoriesOptions" [value]="cat"  (mousedown)="toggleFromSelect(categoriesCtrl, cat, $event)">{{ cat }}</option>
+  </select>
+</div>
+
+<!-- Compliance Levels (new) -->
+<div>
+  <label class="block text-sm font-medium text-gray-700 mb-2">Compliance Levels</label>
+  <select multiple [formControl]="complianceLevelsCtrl"
+          class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+                 focus:border-blue-500 focus:ring focus:ring-blue-200">
+    <option *ngFor="let cl of complianceLevelsOptions" [value]="cl"  (mousedown)="toggleFromSelect(complianceLevelsCtrl, cl, $event)">{{ complianceLevelsName(cl) }}</option>
+  </select>
+</div>
+
+    <!-- Clear button -->
+    <div class="md:col-span-2 flex justify-start gap-x-2 mb-2 mt-2 md:mt-0">
+      <button type="button"
+              (click)="clearFilters()"
+              class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200">
+        Clear Filters
+      </button>
+       <button type="button"
+              (click)="emitFilters()"
+              class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50">
+        Search
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+
+
               
               <div class="max-h-96 overflow-y-auto border border-gray-300 rounded-lg">
-                <div *ngFor="let provider of getAvailableProviders()" 
+                <div *ngFor="let provider of _safeInvitedList" 
                      class="flex items-center p-4 hover:bg-gray-50 border-b border-gray-200 last:border-b-0">
+                     
                   <input 
                     *ngIf="provider.id"
                     type="checkbox" 
@@ -410,11 +472,43 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
                       </p>
                     </div>
                   </label>
-                </div>
-                
-                <div *ngIf="getAvailableProviders().length === 0" class="p-8 text-center text-gray-500">
-                  <p class="text-sm">No more providers available. All providers have been invited.</p>
-                </div>
+                </div>   
+
+                <div *ngFor="let provider of availableProviders" 
+                     class="flex items-center p-4 hover:bg-gray-50 border-b border-gray-200 last:border-b-0">
+                    
+                  <input 
+                    *ngIf="provider.id"
+                    type="checkbox" 
+                    [id]="'provider-' + provider.id"
+                    [checked]="selectedProviders.has(provider.id)"
+                    (change)="toggleProviderSelection(provider.id)"
+                    class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label *ngIf="provider.id" [for]="'provider-' + provider.id" class="ml-3 flex-1 cursor-pointer">
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">
+                        {{ provider.tradingName || 'Unnamed Provider' }}
+                      </p>
+                      <p *ngIf="provider.externalReference?.[0]?.name" class="text-xs text-gray-500 mt-1">
+                        {{ provider.externalReference?.[0]?.name }}
+                      </p>
+                    </div>
+                  </label>
+                </div>                
+                <div *ngIf="availableProviders.length === 0" class="p-8 text-center text-gray-500">
+                    <ng-container *ngIf="!hasActiveFilters(); else filteredEmpty">
+                      <p class="text-sm">
+                        No more providers available. All providers have been invited.
+                      </p>
+                    </ng-container>
+                    <ng-template #filteredEmpty>
+                      <p class="text-sm">
+                        No filters Selected. Adjust Countries/Categories and click <strong>Search</strong>.
+                      </p>
+                     
+                    </ng-template>
+                  </div>
               </div>
 
               <p class="mt-2 text-sm text-gray-500">
@@ -452,6 +546,7 @@ import { Tender_Create, Tender_Update, TenderAttachment, Tender } from '../../..
                   Please select at least one provider
                 </span>
               </button>
+              
               <button 
                 (click)="finalizeTender()"
                 [disabled]="invitedProviders.length === 0 || tenderLoading"
@@ -487,7 +582,13 @@ export class ProviderListComponent implements OnInit {
   private notificationService = inject(NotificationService);
   private authService = inject(AuthService);
   private router = inject(Router);
+
+  countriesOptions: string[] = [];
+  categoriesOptions: string[] = [];
+  complianceLevelsOptions: string[] = [];
   
+
+  _safeInvitedList: Provider[] = [];
   providers: Provider[] = [];
   selectedProvider: Provider | null = null;
   loading = false;
@@ -505,7 +606,7 @@ export class ProviderListComponent implements OnInit {
 
   // Tender form fields - Step 1: Title only
   tenderTitle: string = '';
-  
+
   // Step 2: Date fields and PDF upload
   expectedCompletionDate: string = '';
   requestedCompletionDate: string = '';
@@ -513,27 +614,42 @@ export class ProviderListComponent implements OnInit {
   requestedDateSet: boolean = false;
   selectedPdfFile: File | null = null;
   pdfAttachmentSet: boolean = false;
-  
+
   // Additional fields (added in later steps)
   responseDeadline: string = '';
   attachmentFile: File | null = null;
   tenderNote: string = '';
-  
+
   // Edit mode
   editingTenderId: string | null = null;
   existingAttachment: TenderAttachment | null = null;
   createdQuoteId: string | null = null;
-  
+
   // Track tender creation steps
   tenderCreationStep: number = 1; // 1 = Title, 2 = Dates, 3 = Details, 4 = Providers
 
+  countriesCtrl = new FormControl<string[]>([], { nonNullable: true });
+  categoriesCtrl = new FormControl<string[]>([], { nonNullable: true });
+  complianceLevelsCtrl = new FormControl<string[]>([], { nonNullable: true });
+
+  // Default organization search filters
+  orgFilters: SearchOrganizationsFilters = {
+    categories: [],
+    countries: [],
+    complianceLevels: []
+  };
+  complianceLevelsName = complianceLevelsName;
+  countryName = countryName;
   ngOnInit() {
+    this.loadFilterOptions();
     this.loadProviders();
     
+
     // Check if there's a tender to edit from navigation state
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.extras?.state?.['tender']) {
       const tender = navigation.extras.state['tender'] as Tender;
+
       this.loadTenderForEdit(tender);
     } else {
       // Check history state (for page refresh)
@@ -545,15 +661,44 @@ export class ProviderListComponent implements OnInit {
     }
   }
 
+  emitFilters(): void {
+    const newFilters: SearchOrganizationsFilters = {
+      countries: this.countriesCtrl.value ?? [],
+      categories: this.categoriesCtrl.value ?? [],
+      complianceLevels: this.complianceLevelsCtrl.value ?? []
+    };
+    console.log(newFilters);
+    this.orgFilters = newFilters;
+    this.loadTenderProviders();
+  }
+
+  // Are any filters currently active?
+  hasActiveFilters(): boolean {
+    const hasCountries = (this.orgFilters.countries?.length ?? 0) == 0;
+    const hasCategories = (this.orgFilters.categories?.length ?? 0) == 0;
+    const hasComplianceLevels = (this.orgFilters.complianceLevels?.length ?? 0) == 0;
+
+    return hasCountries && hasCategories && hasComplianceLevels;
+  }
+  clearFilters() {
+    // Reset both controls to empty arrays (and emit change)
+    this.countriesCtrl.setValue([], { emitEvent: true });
+    this.categoriesCtrl.setValue([], { emitEvent: true });
+    this.complianceLevelsCtrl.setValue([], { emitEvent: true });
+
+    // If you rely on (change) only, also call emit explicitly:
+    this.emitFilters();
+  }
   loadTenderForEdit(tender: Tender) {
-    console.log('Loading tender for edit:', tender);
+
     
+
     this.editingTenderId = tender.id || null;
     this.createdQuoteId = tender.id || null;
     this.tenderTitle = tender.tenderNote || '';
     this.responseDeadline = tender.responseDeadline;
     this.tenderNote = tender.tenderNote || '';
-    
+
     // Store existing attachment
     if (tender.attachment) {
       this.existingAttachment = tender.attachment;
@@ -561,13 +706,14 @@ export class ProviderListComponent implements OnInit {
     } else {
       this.existingAttachment = null;
     }
-    
+
     this.selectedProviders = new Set(tender.selectedProviders);
-    
+
+
     // Extract dates directly from the tender object
     console.log('Extracting dates from tender - Effective:', tender.effectiveQuoteCompletionDate, 'Expected Fulfillment:', tender.expectedFulfillmentStartDate);
     this.extractDatesFromTender(tender);
-    
+
     // Set to Step 2 (dates)
     this.tenderCreationStep = 2;
     this.showTenderModal = true;
@@ -578,12 +724,12 @@ export class ProviderListComponent implements OnInit {
    */
   convertDateFromAPI(dateString: string | undefined): string {
     if (!dateString) return '';
-    
+
     // Handle ISO format (YYYY-MM-DDTHH:mm:ss...)
     if (dateString.includes('T')) {
       return dateString.split('T')[0]; // Return just the YYYY-MM-DD part
     }
-    
+
     // Handle DD-MM-YYYY format
     const parts = dateString.split('-');
     if (parts.length === 3) {
@@ -603,7 +749,7 @@ export class ProviderListComponent implements OnInit {
    */
   extractDatesFromTender(tender: Tender) {
     console.log('Extracting dates from tender:', tender);
-    
+
     // Extract and convert effective completion date
     if (tender.effectiveQuoteCompletionDate) {
       this.expectedCompletionDate = this.convertDateFromAPI(tender.effectiveQuoteCompletionDate);
@@ -613,7 +759,7 @@ export class ProviderListComponent implements OnInit {
       this.expectedCompletionDate = '';
       this.expectedDateSet = false;
     }
-    
+
     // Extract and convert expected fulfillment start date
     if (tender.expectedFulfillmentStartDate) {
       this.requestedCompletionDate = this.convertDateFromAPI(tender.expectedFulfillmentStartDate);
@@ -623,7 +769,7 @@ export class ProviderListComponent implements OnInit {
       this.requestedCompletionDate = '';
       this.requestedDateSet = false;
     }
-    
+
     // Check if PDF attachment exists
     if (tender.attachment) {
       this.pdfAttachmentSet = true;
@@ -633,11 +779,12 @@ export class ProviderListComponent implements OnInit {
     }
   }
 
+
   loadProviders() {
     this.loading = true;
     this.error = null;
     this.currentOffset = 0;
-    
+
     this.providerService.getProviders({ offset: this.currentOffset, limit: this.pageSize }).subscribe({
       next: (providers) => {
         this.providers = providers;
@@ -653,10 +800,10 @@ export class ProviderListComponent implements OnInit {
 
   loadMore() {
     if (this.loading) return;
-    
+
     this.loading = true;
     this.currentOffset += this.pageSize;
-    
+
     this.providerService.getProviders({ offset: this.currentOffset, limit: this.pageSize }).subscribe({
       next: (providers) => {
         this.providers = [...this.providers, ...providers];
@@ -688,12 +835,13 @@ export class ProviderListComponent implements OnInit {
   loadTenderProviders() {
     this.tenderLoading = true;
     this.tenderError = null;
-    
-    this.providerService.getProvidersForTender().subscribe({
+
+    this.providerService.getProvidersForTenderNew(this.orgFilters).subscribe({
       next: (providers) => {
         this.tenderProviders = providers;
         this.tenderLoading = false;
-        
+        this.updateAvailableProviders()
+
         // After providers are loaded, load invited providers (if in edit mode)
         if (this.tenderCreationStep === 3) {
           this.loadInvitedProviders();
@@ -707,13 +855,7 @@ export class ProviderListComponent implements OnInit {
     });
   }
 
-  toggleProviderSelection(providerId: string) {
-    if (this.selectedProviders.has(providerId)) {
-      this.selectedProviders.delete(providerId);
-    } else {
-      this.selectedProviders.add(providerId);
-    }
-  }
+
 
   closeTenderModal() {
     this.showTenderModal = false;
@@ -788,7 +930,7 @@ export class ProviderListComponent implements OnInit {
     }
 
     this.tenderLoading = true;
-    
+
     this.tenderService.createCoordinatorTender(userId, this.tenderTitle.trim()).subscribe({
       next: (createdTender) => {
         console.log('Coordinator tender created:', createdTender);
@@ -796,7 +938,7 @@ export class ProviderListComponent implements OnInit {
         this.editingTenderId = createdTender.id || null;
         this.notificationService.showSuccess('Tender created! Now set the completion dates.');
         this.tenderLoading = false;
-        
+
         // Move to Step 2: Date fields
         this.tenderCreationStep = 2;
       },
@@ -828,7 +970,7 @@ export class ProviderListComponent implements OnInit {
 
     this.tenderLoading = true;
     const formattedDate = this.formatDateForAPI(this.expectedCompletionDate);
-    
+
     this.tenderService.updateTenderDate(this.createdQuoteId, formattedDate, 'effective').subscribe({
       next: (updatedTender) => {
         console.log('Effective completion date updated:', updatedTender);
@@ -855,7 +997,7 @@ export class ProviderListComponent implements OnInit {
 
     this.tenderLoading = true;
     const formattedDate = this.formatDateForAPI(this.requestedCompletionDate);
-    
+
     this.tenderService.updateTenderDate(this.createdQuoteId, formattedDate, 'expectedFulfillment').subscribe({
       next: (updatedTender) => {
         console.log('Expected fulfillment start date updated:', updatedTender);
@@ -877,7 +1019,7 @@ export class ProviderListComponent implements OnInit {
   onPdfFileSelected(event: Event) {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
-    
+
     if (file) {
       if (file.type !== 'application/pdf') {
         this.notificationService.showError('Please select a valid PDF file');
@@ -902,7 +1044,7 @@ export class ProviderListComponent implements OnInit {
     }
 
     this.tenderLoading = true;
-    
+
     this.tenderService.addAttachmentToTender(this.createdQuoteId, this.selectedPdfFile, '').subscribe({
       next: (updatedTender) => {
         console.log('PDF attachment uploaded:', updatedTender);
@@ -930,14 +1072,14 @@ export class ProviderListComponent implements OnInit {
    * Proceed from Step 2 to Step 3 (Provider Selection)
    */
   proceedToProviderSelection() {
-    if (!this.isStep2Complete()) {
+    if (!this.isStep2Complete() && false) {
       this.notificationService.showError('Please complete all date and PDF fields first');
       return;
     }
 
     // Move to Step 3
     this.tenderCreationStep = 3;
-    
+
     // Load providers for selection (will automatically load invited providers after)
     this.loadTenderProviders();
   }
@@ -946,6 +1088,7 @@ export class ProviderListComponent implements OnInit {
    * Load already invited providers by fetching tendering quotes with the coordinator quote's externalId
    */
   loadInvitedProviders() {
+
     if (!this.createdQuoteId) {
       console.log('No coordinator quote ID, skipping invited providers load');
       return;
@@ -960,23 +1103,23 @@ export class ProviderListComponent implements OnInit {
     console.log('Loading invited providers for externalId:', this.createdQuoteId);
 
     this.tenderLoading = true;
-    
+
     this.tenderService.getTenderingQuotesRaw(userId, 'Customer', this.createdQuoteId).subscribe({
       next: (quotes) => {
         console.log('Received tendering quotes:', quotes);
-        
+
         // Clear existing invited providers
         this.invitedProviders = [];
-        
+
         // Parse each quote to extract provider info
         quotes.forEach(quote => {
           // Find the Seller in relatedParty
           const sellerParty = quote.relatedParty?.find(p => p.role === 'Seller');
-          
+
           if (sellerParty && quote.id) {
             // Find the matching provider in our providers list
             const provider = this.tenderProviders.find(p => p.id === sellerParty.id);
-            
+
             if (provider) {
               this.invitedProviders.push({
                 provider: provider,
@@ -988,7 +1131,7 @@ export class ProviderListComponent implements OnInit {
             }
           }
         });
-        
+
         console.log('Total invited providers loaded:', this.invitedProviders.length);
         this.tenderLoading = false;
       },
@@ -1023,9 +1166,66 @@ export class ProviderListComponent implements OnInit {
   /**
    * Get available providers (excluding already invited ones)
    */
+
+  availableProviders: Provider[] = [];
+
+  updateAvailableProviders(): void {
+    this.availableProviders = this.getAvailableProviders();
+  }
+
+  // 🔹 Updated function — keeps invited list safe and returns only available providers
   getAvailableProviders(): Provider[] {
-    const invitedProviderIds = new Set(this.invitedProviders.map(ip => ip.provider.id));
-    return this.tenderProviders.filter(p => p.id && !invitedProviderIds.has(p.id));
+    // Simple and clean — everything is handled by the helper
+    return this.rebuildSelectionAndAvailable();
+  }
+
+  toggleProviderSelection(providerId: string) {
+    // find in local safe list (which stores { provider, quoteId })
+    const idx = this._safeInvitedList.findIndex(x => x?.id === providerId);
+
+    if (idx >= 0) {
+      // UNCHECK → remove from local safe list
+      this._safeInvitedList.splice(idx, 1);
+    } else {
+      // CHECK → add to local safe list
+      const p = this.tenderProviders.find(tp => tp.id === providerId);
+      if (p) {
+
+        this._safeInvitedList.push(p);
+      }
+    }
+
+    // Re-derive selectedProviders + available list in one place
+    this.rebuildSelectionAndAvailable();
+  }
+
+  private rebuildSelectionAndAvailable(): Provider[] {
+
+    // 1) selectedProviders = IDs from local safe list
+    this.selectedProviders = new Set(
+      this._safeInvitedList
+        .map(x => x?.id)
+        .filter((id): id is string => !!id)
+    );
+
+
+    // 2) all IDs that must be excluded from availability (server invited + locally selected)
+    const excludeIds = new Set<string>([
+      ...this.invitedProviders
+        .map(ip => ip?.provider?.id)
+        .filter((id): id is string => !!id),
+      ...Array.from(this.selectedProviders),
+    ]);
+
+    // 3) compute available list
+    const available = this.tenderProviders
+      .filter(p => !!p?.id && !excludeIds.has(p.id!))
+      .map(p => ({ ...p } as Provider));
+
+    // keep a cached copy if you want to bind directly in template
+    this.availableProviders = available;
+
+    return available;
   }
 
   /**
@@ -1049,7 +1249,10 @@ export class ProviderListComponent implements OnInit {
     }
 
     this.tenderLoading = true;
+
     const providerIds = Array.from(this.selectedProviders);
+    
+
     const customerMessage = this.tenderTitle; // Use tender title as customer message
 
     console.log('Creating tendering quotes for providers:', providerIds);
@@ -1058,7 +1261,8 @@ export class ProviderListComponent implements OnInit {
 
     // Create tendering quotes one by one to capture individual quote IDs
     const requests = providerIds.map(providerId => {
-      const provider = this.tenderProviders.find(p => p.id === providerId);
+      const provider = this._safeInvitedList.find(p => p.id === providerId);
+
       return this.tenderService.createTenderingQuote(
         userId,
         providerId,
@@ -1078,13 +1282,13 @@ export class ProviderListComponent implements OnInit {
     Promise.all(requests)
       .then(results => {
         console.log('Tendering quotes created:', results);
-        
+
         // Add to invited providers list
         this.invitedProviders.push(...results);
-        
+
         // Clear selection
         this.selectedProviders.clear();
-        
+
         this.notificationService.showSuccess(`${providerIds.length} provider(s) invited successfully!`);
         this.tenderLoading = false;
       })
@@ -1110,10 +1314,10 @@ export class ProviderListComponent implements OnInit {
     this.tenderService.deleteQuote(quoteId).subscribe({
       next: () => {
         console.log('Quote deleted for provider:', providerId);
-        
+
         // Remove from invited list
         this.invitedProviders = this.invitedProviders.filter(ip => ip.quoteId !== quoteId);
-        
+
         this.notificationService.showSuccess('Provider invitation removed successfully');
         this.tenderLoading = false;
       },
@@ -1182,11 +1386,11 @@ export class ProviderListComponent implements OnInit {
     this.tenderService.getQuoteById(this.createdQuoteId).pipe(
       switchMap(coordinatorQuote => {
         console.log('Coordinator quote retrieved:', coordinatorQuote);
-        
+
         // Extract dates from coordinator quote
         const effectiveDate = coordinatorQuote.effectiveQuoteCompletionDate;
         const expectedFulfillmentDate = coordinatorQuote.expectedFulfillmentStartDate;
-        
+
         if (!effectiveDate || !expectedFulfillmentDate) {
           throw new Error('Coordinator quote is missing date information');
         }
@@ -1194,7 +1398,7 @@ export class ProviderListComponent implements OnInit {
         // Format dates for API (DD-MM-YYYY format)
         const formattedEffectiveDate = this.formatDateForAPI(this.expectedCompletionDate);
         const formattedExpectedFulfillmentDate = this.formatDateForAPI(this.requestedCompletionDate);
-        
+
         console.log(`Copying dates to ${this.invitedProviders.length} provider quotes:`, {
           effective: formattedEffectiveDate,
           expectedFulfillment: formattedExpectedFulfillmentDate
@@ -1204,7 +1408,7 @@ export class ProviderListComponent implements OnInit {
         const dateUpdateObservables = this.invitedProviders.flatMap(invitedProvider => {
           const quoteId = invitedProvider.quoteId;
           console.log(`Updating dates for provider quote ${quoteId.slice(-8)}`);
-          
+
           return [
             // Update effective date
             this.tenderService.updateQuoteDate(quoteId, formattedEffectiveDate, 'effective'),
@@ -1223,21 +1427,21 @@ export class ProviderListComponent implements OnInit {
       }),
       switchMap(dateUpdateResults => {
         console.log(`Successfully updated dates for ${dateUpdateResults.length / 2} provider quotes`);
-        
+
         // Step 3: Update coordinator quote status to "inProgress" (which maps to "pre-launched" in GUI)
         return this.tenderService.updateQuoteStatus(this.createdQuoteId!, 'inProgress');
       })
     ).subscribe({
       next: (updatedQuote) => {
         console.log('Coordinator quote status updated to inProgress:', updatedQuote);
-        
+
         // TODO: Implement actual notification system to send emails/notifications to providers
         // For now, just show a success message
         this.notificationService.showSuccess('Dates copied to all provider quotes and notifications sent to providers');
-        
+
         this.tenderLoading = false;
         this.closeTenderModal();
-        
+
         // Navigate to tenders list
         this.router.navigate(['/tenders']);
       },
@@ -1257,7 +1461,7 @@ export class ProviderListComponent implements OnInit {
 
     try {
       let attachment: TenderAttachment | undefined;
-      
+
       if (this.attachmentFile) {
         // New file uploaded
         const base64Content = await this.tenderService.fileToBase64(this.attachmentFile);
@@ -1327,7 +1531,7 @@ export class ProviderListComponent implements OnInit {
 
     try {
       let attachment: TenderAttachment | undefined;
-      
+
       if (this.attachmentFile) {
         const base64Content = await this.tenderService.fileToBase64(this.attachmentFile);
         attachment = {
@@ -1341,7 +1545,7 @@ export class ProviderListComponent implements OnInit {
       }
 
       const selectedProviderIds = Array.from(this.selectedProviders);
-      
+
       // Get provider names from tenderProviders
       const providerMap = new Map<string, string>();
       this.tenderProviders.forEach(provider => {
@@ -1359,7 +1563,7 @@ export class ProviderListComponent implements OnInit {
         this.tenderService.updateTender(this.editingTenderId, parentTenderUpdate).subscribe({
           next: (updatedParent) => {
             console.log('Parent tender updated to pre-launched:', updatedParent);
-            
+
             // Create child tenders for each selected provider
             const childTenders: Tender_Create[] = selectedProviderIds.map(providerId => ({
               category: 'tendering',
@@ -1403,7 +1607,7 @@ export class ProviderListComponent implements OnInit {
         this.tenderService.createTender(parentTenderData).subscribe({
           next: (createdParent) => {
             console.log('Parent tender created:', createdParent);
-            
+
             // Create child tenders for each selected provider
             const childTenders: Tender_Create[] = selectedProviderIds.map(providerId => ({
               category: 'tendering',
@@ -1439,4 +1643,32 @@ export class ProviderListComponent implements OnInit {
       this.notificationService.showError('Failed to process tender creation');
     }
   }
+
+  private loadFilterOptions(): void {
+    this.clearFilters();
+    this.providerService.getFilterOptions().subscribe({
+      next: ({ categories, countries, complianceLevels }) => {
+        this.categoriesOptions = categories ?? [];
+        this.countriesOptions = countries ?? [];
+        this.complianceLevelsOptions = complianceLevels ?? [];
+      },
+      error: (err) => {
+        console.warn('Failed to load filter options', err);
+      }
+    });
+  }
+
+
+  toggleFromSelect(ctrl: FormControl<string[]>, value: string, event: MouseEvent) {
+  event.preventDefault(); // stop native multi-select behavior
+  event.stopPropagation();
+
+  const cur = ctrl.value ?? [];
+  const next = cur.includes(value)
+    ? cur.filter(v => v !== value)
+    : [...cur, value];
+
+  ctrl.setValue(next);
+}
+
 }
