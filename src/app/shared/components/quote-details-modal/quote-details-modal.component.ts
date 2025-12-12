@@ -45,9 +45,9 @@ import { Quote } from '../../models/quote.model';
 
         <!-- Quote Content -->
         <div *ngIf="!isLoading && !error && quote" class="max-h-96 overflow-y-auto">
-          <!-- Customer Message - Main Content -->
+          <!-- Buyer Message - Main Content -->
           <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-3">Customer Message</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Buyer Message</h3>
             <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
               <p class="text-base text-gray-800 leading-relaxed whitespace-pre-wrap">{{ quote.description || 'No message provided' }}</p>
             </div>

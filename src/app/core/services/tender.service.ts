@@ -5,6 +5,7 @@ import { Tender, Tender_Create, Tender_Update } from '../../shared/models/tender
 import { Quote, QuoteStateType } from '../../shared/models/quote.model';
 import { ApiService } from './api.service';
 import { environment } from '../../../environments/environment';
+import { ApiRole, API_ROLES } from '../../shared/constants/roles.constants';
 
 /**
  * TenderService - Manages tender/quote operations
@@ -175,7 +176,7 @@ export class TenderService extends ApiService {
    */
   getTenderingQuotesByUser(
     userId: string, 
-    role: 'Customer' | 'Seller' = 'Seller',
+    role: ApiRole = API_ROLES.SELLER,
     externalId?: string
   ): Observable<Tender[]> {
     const encodedUserId = encodeURIComponent(userId);
@@ -198,7 +199,7 @@ export class TenderService extends ApiService {
    */
   getTenderingQuotesRaw(
     userId: string,
-    role: 'Customer' | 'Seller' = 'Seller',
+    role: ApiRole = API_ROLES.SELLER,
     externalId?: string
   ): Observable<Quote[]> {
     const encodedUserId = encodeURIComponent(userId);
@@ -211,7 +212,7 @@ export class TenderService extends ApiService {
    * Get tailored quotes by user with role filtering (non-tendering)
    * GET /quoteManagement/quoteByUser/{userId}?role={role}
    */
-  getQuotesByUser(userId: string, role: 'Customer' | 'Seller'): Observable<Tender[]> {
+  getQuotesByUser(userId: string, role: ApiRole): Observable<Tender[]> {
     const encodedUserId = encodeURIComponent(userId);
     let params = new HttpParams().set('role', role);
     
@@ -517,7 +518,7 @@ export class TenderService extends ApiService {
 
     // Extract selected providers from related parties
     const selectedProviders = quote.relatedParty
-      ?.filter(party => party.role === 'Seller')
+      ?.filter(party => party.role?.toLowerCase() === API_ROLES.SELLER.toLowerCase())
       .map(party => party.id) || [];
 
     // Map quote category to tender category
@@ -540,7 +541,7 @@ export class TenderService extends ApiService {
     // Extract external_id and provider from quote
     const external_id = quote.externalId;
     const provider = quote.relatedParty
-      ?.find(party => party.role === 'Seller')
+      ?.find(party => party.role?.toLowerCase() === API_ROLES.SELLER.toLowerCase())
       ?.name;
 
     return {
