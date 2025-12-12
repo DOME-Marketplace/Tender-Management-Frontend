@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SearchOrganizationsFilters } from '../../shared/models/search-organizations-filters.model';
+import { TenderFilters } from '../../shared/models/tender-filters.model';
 import { FilterOptions} from '../../shared/models/filter-options.model';
 import { forkJoin } from 'rxjs';
 
@@ -107,6 +108,24 @@ export class ProviderService {
       }),
       catchError((error) => {
         console.warn('Providers for tender (new) API failed:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Extended provider search for tender filters (name, serviceType, market, solutionCategory, etc.)
+   */
+  searchProvidersWithTenderFilters(filters: TenderFilters): Observable<Provider[]> {
+    const url = environment.searchOrganizationsEndpoint;
+    return this.http.post<any>(url, filters).pipe(
+      map((response) => {
+        if (Array.isArray(response)) return response as Provider[];
+        if (response?.data && Array.isArray(response.data)) return response.data as Provider[];
+        return [];
+      }),
+      catchError((error) => {
+        console.warn('Extended provider search API failed:', error);
         return of([]);
       })
     );

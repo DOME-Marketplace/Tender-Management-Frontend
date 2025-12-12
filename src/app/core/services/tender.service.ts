@@ -242,7 +242,8 @@ export class TenderService extends ApiService {
    */
   updateTenderStatus(id: string, status: string): Observable<Tender> {
     const encodedId = encodeURIComponent(id);
-    let params = new HttpParams().set('statusValue', status);
+    const backendStatus = this.mapTenderStatusToQuoteStatus(status);
+    let params = new HttpParams().set('statusValue', backendStatus);
     
     return this.patch<Quote>(
       `/updateQuoteStatus/${encodedId}`,
@@ -492,10 +493,11 @@ export class TenderService extends ApiService {
    * Map backend Quote to frontend Tender model
    */
   private mapQuoteToTender(quote: Quote): Tender {
-    // Extract response deadline from quote
-    const responseDeadline = quote.expectedFulfillmentStartDate || 
-                            quote.effectiveQuoteCompletionDate || 
-                            new Date().toISOString();
+    // Extract response deadline from quote (fallback to quote date)
+    const responseDeadline = quote.expectedFulfillmentStartDate ||
+      quote.effectiveQuoteCompletionDate ||
+      quote.quoteDate ||
+      new Date().toISOString();
 
     // Extract tender title from quote.description (this is where the title is saved)
     const tenderNote = quote.description || undefined;
@@ -528,14 +530,28 @@ export class TenderService extends ApiService {
       category = 'coordinator';
     }
 
-    // Map quote state to tender state
-    let state: 'draft' | 'pre-launched' | 'pending' | 'sent' | 'closed' = 'draft';
-    if (quote.state === 'inProgress') state = 'draft';
-    else if (quote.state === 'pending') state = 'pending';
-    else if (quote.state === 'approved') state = 'sent';
-    else if (quote.state === 'accepted') state = 'closed';
-    else if (quote.state === 'cancelled') state = 'closed';
-    else if (quote.state === 'rejected') state = 'closed';
+    // Map quote state to canonical tender state
+    let state: Tender['state'] = 'draft';
+    switch (quote.state) {
+      case 'pending':
+        state = 'draft';
+        break;
+      case 'inProgress':
+        state = 'started';
+        break;
+      case 'approved':
+        state = 'launched';
+        break;
+      case 'accepted':
+        state = 'assigned';
+        break;
+      case 'cancelled':
+      case 'rejected':
+        state = 'closed';
+        break;
+      default:
+        state = 'draft';
+    }
 
     // Extract external_id and provider from quote
     const external_id = quote.externalId;
@@ -543,11 +559,23 @@ export class TenderService extends ApiService {
       ?.find(party => party.role === 'Seller')
       ?.name;
 
+    // Participants summary (best-effort from related parties)
+    const invited = selectedProviders.length;
+    const participantsSummary = {
+      invited,
+      accepted: 0,
+      rejected: 0
+    };
+
     return {
       id: quote.id,
       category,
       state,
+      tenderName: quote.description,
+      tenderCode: quote.id,
       responseDeadline,
+      acceptanceDeadline: quote.expectedFulfillmentStartDate,
+      offeringDeadline: quote.effectiveQuoteCompletionDate,
       tenderNote,
       attachment,
       selectedProviders,
@@ -556,8 +584,16 @@ export class TenderService extends ApiService {
       createdAt: quote.quoteDate,
       updatedAt: quote.quoteDate,
       effectiveQuoteCompletionDate: quote.effectiveQuoteCompletionDate,
-      expectedFulfillmentStartDate: quote.expectedFulfillmentStartDate
+      expectedFulfillmentStartDate: quote.expectedFulfillmentStartDate,
+      participantsSummary
     };
+  }
+
+  /**
+   * Public wrapper to map a Quote to a Tender model
+   */
+  toTender(quote: Quote): Tender {
+    return this.mapQuoteToTender(quote);
   }
 
   /**
@@ -570,5 +606,25 @@ export class TenderService extends ApiService {
       category: tender.category === 'tendering' ? 'tender' : tender.category,
       // ... other mappings
     };
+  }
+
+  /**
+   * Map canonical tender status to backend quote status
+   */
+  private mapTenderStatusToQuoteStatus(status: string): string {
+    switch (status) {
+      case 'draft':
+        return 'pending';
+      case 'started':
+        return 'inProgress';
+      case 'launched':
+        return 'approved';
+      case 'assigned':
+        return 'accepted';
+      case 'closed':
+        return 'cancelled';
+      default:
+        return status;
+    }
   }
 }

@@ -41,20 +41,29 @@ import { LoginService } from './core/services/login.service';
             </div>
             
             <!-- User Info & Logout -->
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-4 relative">
               <div class="text-sm text-gray-600">
                 <span class="font-medium">User:</span>
                 <span class="ml-1 font-mono text-xs">{{ getUserIdShort() }}</span>
               </div>
-              <button
-                (click)="logout()"
-                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Logout
-              </button>
+              <div class="relative">
+                <button
+                  (click)="toggleUserMenu()"
+                  class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+                  title="Open user menu"
+                >
+                  ☰
+                </button>
+                <div *ngIf="userMenuOpen" class="absolute right-0 mt-2 w-48 bg-white shadow rounded border border-gray-200 z-20">
+                  <a routerLink="/tenders" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Tender management</a>
+                  <button
+                    (click)="logout()"
+                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -74,6 +83,7 @@ export class AppComponent {
   private authService = inject(AuthService);
   private loginService = inject(LoginService);
   private router = inject(Router);
+  userMenuOpen = false;
 
   isLoggedIn(): boolean {
     return this.loginService.isLoggedIn() || !!this.authService.getUserId();
@@ -94,5 +104,9 @@ export class AppComponent {
     this.authService.logout();
     this.loginService.logout();
     this.router.navigate(['/login']);
+  }
+
+  toggleUserMenu() {
+    this.userMenuOpen = !this.userMenuOpen;
   }
 }
